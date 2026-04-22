@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Resolve Dashboard — AI Redesign v3 (Dark)</title>
+<style>
+  :root{
+    /* Dark theme (restored) */
+    --bg:#0c0f12;
+    --bg-2:#11161b;
+    --panel:#151b22;
+    --panel-2:#1a2129;
+    --border:#232c36;
+    --border-soft:#1c242d;
+    --muted:#8a95a1;
+    --text:#e6edf3;
+    --text-dim:#b6bfca;
+
+    /* Brand + AI palette (no purple) */
+    --green:#22c55e;
+    --green-2:#16a34a;
+    --green-soft:rgba(34,197,94,.15);
+    --teal:#14b8a6;
+    --teal-2:#2dd4bf;
+    --cyan:#22d3ee;
+    --amber:#f59e0b;
+    --slate:#94a3b8;
+    --rose:#ef4444;
+
+    --ai-grad: linear-gradient(135deg, #22d3ee 0%, #2dd4bf 50%, #22c55e 100%);
+    --ai-grad-soft: linear-gradient(135deg, rgba(34,211,238,.14), rgba(45,212,191,.12), rgba(34,197,94,.14));
+
+    /* Consistent gauge segment palette — dark-theme tuned */
+    --seg-paid:#22c55e;     /* Paid Transient */
+    --seg-valid:#22d3ee;    /* Validated */
+    --seg-monthly:#f59e0b;  /* Monthly Parkers */
+    --seg-grace:#94a3b8;    /* Grace Period */
+    --seg-white:#2dd4bf;    /* White List */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  body{
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(20,184,166,.08), transparent 60%),
+      radial-gradient(900px 500px at -5% 110%, rgba(34,211,238,.06), transparent 60%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .page-label{position:fixed;top:14px;right:14px;font-size:10.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;z-index:20;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+
+  .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+
+  /* ── SIDEBAR (v1 style, refined) ── */
+  .sb{background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 10px;gap:4px;position:sticky;top:0;height:100vh}
+  .logo{display:flex;align-items:center;gap:10px;padding:4px 10px 14px}
+  .logo .mark{
+    width:32px;height:32px;border-radius:9px;
+    background:var(--ai-grad);
+    display:grid;place-items:center;
+    box-shadow:0 8px 20px -10px rgba(45,212,191,.6), inset 0 0 0 1px rgba(255,255,255,.12)
+  }
+  .logo .mark svg{width:17px;height:17px;color:#0a141b}
+  .logo .wordmark{font-weight:700;letter-spacing:-.01em;font-size:17px;color:#f1f5f9}
+  .logo .wordmark span{color:var(--green)}
+
+  /* Agent Mode button */
+  .agent-btn{
+    margin:2px 2px 2px;
+    position:relative;
+    padding:2px;
+    border-radius:12px;
+    background:var(--ai-grad);
+    box-shadow:0 10px 24px -14px rgba(45,212,191,.7), 0 0 0 1px rgba(255,255,255,.04);
+  }
+  .agent-btn .inner{
+    background:linear-gradient(180deg,#121820,#0e141a);
+    border-radius:10px;
+    padding:10px 12px;
+    display:flex;align-items:center;gap:10px;
+    color:#eaf2ff;
+    cursor:pointer;
+  }
+  .agent-btn .inner:hover{background:linear-gradient(180deg,#152230,#0f1820)}
+  .agent-btn .spark{
+    width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+    background:rgba(255,255,255,.06);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .agent-btn .spark svg{width:13px;height:13px;color:#fff}
+  .agent-btn .label{display:flex;flex-direction:column;line-height:1.1}
+  .agent-btn .label b{font-size:13px;font-weight:600}
+  .agent-btn .label small{color:#9fb0c2;font-size:10.5px;letter-spacing:.02em}
+  .agent-btn .pulse{
+    margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--teal-2);
+    box-shadow:0 0 0 0 rgba(45,212,191,.7);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(45,212,191,.7)}
+    70%{box-shadow:0 0 0 10px rgba(45,212,191,0)}
+    100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}
+  }
+
+  .section{font-size:10px;letter-spacing:.14em;color:#5b6773;text-transform:uppercase;padding:14px 10px 6px;font-weight:600}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-weight:500;font-size:13px;position:relative}
+  .nav a:hover{background:#1a2129;color:var(--text)}
+  .nav a.active{background:linear-gradient(180deg,rgba(34,197,94,.18),rgba(34,197,94,.06));color:#d7fbe4}
+  .nav a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--green)}
+  .nav a svg{width:16px;height:16px;opacity:.9}
+  .sb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px;border-top:1px dashed #222a33}
+
+  /* ── MAIN ── */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(12,15,18,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:18px;margin:0;font-weight:600;letter-spacing:-.005em}
+  .crumb{color:var(--muted);font-size:12px;margin-left:4px}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-left:auto}
+  .seg button{background:transparent;border:0;color:var(--text-dim);padding:8px 12px;font-size:12.5px;font-weight:500;cursor:pointer}
+  .seg button.on{background:var(--green);color:#07130b}
+  .ai-input{display:flex;align-items:center;gap:8px;padding:2px;background:var(--ai-grad);border-radius:999px}
+  .ai-input .wrap{background:#0f141a;border-radius:999px;padding:7px 12px;display:flex;align-items:center;gap:8px;min-width:290px}
+  .ai-input input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:12.5px}
+  .ai-input input::placeholder{color:#6b7785}
+  .ai-input .kbd{font-size:10px;color:#7b8896;border:1px solid #2a333d;border-radius:5px;padding:1px 5px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2dd4bf,#22c55e);display:grid;place-items:center;color:#07130b;font-weight:700;font-size:12px}
+
+  .content{padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px}
+
+  /* AI Insights banner */
+  .insights{position:relative;border-radius:14px;padding:1px;background:var(--ai-grad)}
+  .insights .inner{background:linear-gradient(180deg,rgba(18,24,32,.95),rgba(14,18,24,.95));border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+  .insights .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:4px 8px;border-radius:999px;font-size:11px;color:#cfd8e3;letter-spacing:.04em;font-weight:500}
+  .insights h3{margin:0;font-size:14px;font-weight:600}
+  .insights p{margin:3px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.45}
+  .insights .actions{margin-left:auto;display:flex;gap:8px}
+  .btn{border:1px solid var(--border);background:#111821;color:var(--text);padding:8px 12px;border-radius:9px;font-size:12px;cursor:pointer;font-weight:500}
+  .btn:hover{background:#141c26}
+  .btn.primary{background:var(--ai-grad);color:#07130b;border:0;font-weight:600}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--text-dim)}
+  .btn.small{padding:5px 9px;font-size:11.5px;border-radius:7px}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;inset:auto -20% -40% auto;width:180px;height:120px;background:radial-gradient(closest-side,rgba(34,197,94,.12),transparent 70%);pointer-events:none}
+  .kpi .t{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+  .kpi .v{font-size:20px;font-weight:700;margin-top:4px}
+  .kpi .d{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-top:6px}
+  .kpi .d.up{color:#7ee6a5}
+  .kpi .d.down{color:#ff9292}
+  .spark{height:26px;margin-top:4px;opacity:.9}
+
+  /* Revenue + Agent row */
+  .chart-row{display:grid;grid-template-columns:2.2fr 1fr;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+  .card .hd{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .card .hd h3{margin:0;font-size:13.5px;font-weight:600}
+  .card .hd .spacer{flex:1}
+  .chip{font-size:10.5px;color:#cfd8e3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:3px 7px;border-radius:999px;letter-spacing:.04em}
+  .chip.ai{background:var(--ai-grad-soft);border-color:rgba(45,212,191,.35);color:#c9fff1;font-weight:600}
+
+  .rev-meta{display:flex;gap:18px;padding:4px 2px 8px;color:var(--text-dim);font-size:12px;flex-wrap:wrap}
+  .rev-meta b{color:var(--text);font-size:13.5px;display:block}
+  .rev-chart{height:300px;position:relative}
+  .rev-chart svg{width:100%;height:100%;display:block}
+
+  /* Ask the Agent */
+  .agent-card{display:flex;flex-direction:column;gap:10px}
+  .agent-card .hdr{display:flex;align-items:center;gap:8px}
+  .agent-card .hdr .dot{width:22px;height:22px;border-radius:7px;background:var(--ai-grad);display:grid;place-items:center;box-shadow:0 4px 10px -4px rgba(45,212,191,.6)}
+  .agent-card .hdr .dot svg{width:12px;height:12px;color:#07130b}
+  .agent-card p.lead{margin:0;color:var(--text-dim);font-size:12.5px;line-height:1.5}
+  .agent-card .prompts{display:flex;flex-direction:column;gap:6px}
+  .agent-card .prompts button{text-align:left;padding:9px 11px}
+  .agent-card .prompts button:hover{border-color:rgba(45,212,191,.4);color:#c9fff1}
+  .agent-card .note{font-size:11.5px;color:#c9fff1;background:var(--ai-grad-soft);border:1px solid rgba(45,212,191,.28);padding:8px 10px;border-radius:9px;display:flex;align-items:flex-start;gap:8px;line-height:1.45}
+  .agent-card .note svg{flex:0 0 auto;width:13px;height:13px;margin-top:1px;color:var(--teal-2)}
+
+  /* Location section */
+  .sec-hd{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap}
+  .sec-hd h2{margin:0;font-size:15px;font-weight:600;letter-spacing:-.005em}
+  .sec-hd .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .tabs{display:inline-flex;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .tabs button{background:transparent;border:0;color:var(--text-dim);padding:7px 12px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .tabs button .count{font-size:10.5px;background:rgba(255,255,255,.05);padding:1px 6px;border-radius:999px;color:var(--muted)}
+  .tabs button.on{background:#e6edf3;color:#0f141a}
+  .tabs button.on .count{background:rgba(0,0,0,.1);color:#0f141a}
+
+  /* Palette legend strip */
+  .palette{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--text-dim);padding:2px 2px 4px}
+  .palette .it{display:inline-flex;align-items:center;gap:6px}
+  .palette i{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .palette .note{margin-left:auto;color:var(--muted)}
+
+  /* Gauges */
+  .gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .gauge{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 14px 12px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+  .gauge.featured{box-shadow:0 0 0 1px rgba(45,212,191,.35), 0 24px 60px -30px rgba(45,212,191,.35)}
+  .gauge.featured::before{content:"";position:absolute;inset:0;border-radius:14px;background:var(--ai-grad-soft);pointer-events:none;opacity:.45}
+
+  .g-title{display:flex;align-items:center;gap:8px}
+  .g-title b{font-size:13.5px;font-weight:600}
+  .g-title .live{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+  .g-title .type{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  .g-body{display:grid;grid-template-columns:172px 1fr;gap:14px;align-items:center}
+  .g-donut{position:relative;width:172px;height:172px;justify-self:center}
+  .g-donut svg{width:172px;height:172px;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4))}
+  .g-donut .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;line-height:1}
+  .g-donut .center .primary{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+  .g-donut .center .primary-label{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:4px}
+  .g-donut .center .divider{width:28px;height:1px;background:var(--border);margin:7px 0 5px}
+  .g-donut .center .secondary{font-size:14px;font-weight:700;color:#2dd4bf}
+  .g-donut .center .secondary-label{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:3px}
+
+  /* Right stats on the card */
+  .g-stats{display:flex;flex-direction:column;gap:6px}
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px dashed var(--border-soft)}
+  .stat-row:last-child{border-bottom:0}
+  .stat-row .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+  .stat-row .sub{font-size:10px;color:#6b7785;font-weight:500}
+  .stat-row .val{font-size:13.5px;font-weight:700;color:var(--text)}
+
+  /* Legend */
+  .g-legend{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding-top:8px;border-top:1px solid var(--border-soft)}
+  .g-legend .it{display:flex;flex-direction:column;gap:2px}
+  .g-legend .sw{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim);letter-spacing:.02em}
+  .g-legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .g-legend .pct{font-size:12px;font-weight:700;color:var(--text)}
+
+  /* Footer of card */
+  .g-foot{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border-soft)}
+  .g-foot .trend{font-size:11.5px;font-weight:600}
+  .g-foot .trend.up{color:#7ee6a5}
+  .g-foot .trend.down{color:#ff9292}
+  .g-foot .more{margin-left:auto}
+
+  .ai-note{font-size:11.5px;color:#c9fff1;background:var(--ai-grad-soft);border:1px solid rgba(45,212,191,.25);padding:7px 9px;border-radius:8px;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+  .ai-note svg{flex:0 0 auto;width:13px;height:13px;margin-top:1px;color:var(--teal-2)}
+
+  /* Agent peek */
+  .agent-peek{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,rgba(45,212,191,.07),rgba(34,211,238,.05));border:1px dashed rgba(45,212,191,.35);padding:10px 14px;border-radius:12px}
+  .agent-peek .dot{width:28px;height:28px;border-radius:9px;background:var(--ai-grad);display:grid;place-items:center}
+  .agent-peek .dot svg{color:#07130b;width:16px;height:16px}
+  .agent-peek p{margin:0;color:#cfd8e3;font-size:12.5px}
+  .agent-peek p b{color:var(--text)}
+  .agent-peek .btn{margin-left:auto}
+
+  /* Drawer */
+  .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:flex-end;z-index:50}
+  .drawer-backdrop.on{display:flex}
+  .drawer{background:#0f141a;border-left:1px solid var(--border);width:min(460px,92vw);height:100vh;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:10px;color:var(--text)}
+  .drawer h3{margin:0;font-size:16px;font-weight:600}
+  .drawer .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border);font-size:13px;color:var(--text-dim)}
+  .drawer .row b{font-weight:700;color:var(--text)}
+  .drawer .close{align-self:flex-end}
+
+  .compare{margin-top:28px;padding:14px 20px;border-top:1px solid var(--border);color:var(--muted);font-size:11.5px}
+
+  @media (max-width:1280px){
+    .chart-row{grid-template-columns:1fr}
+  }
+  @media (max-width:1200px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:1100px){
+    .shell{grid-template-columns:1fr}
+    .sb{position:static;height:auto}
+    .gauges{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:700px){
+    .gauges{grid-template-columns:1fr}
+    .g-body{grid-template-columns:1fr}
+    .g-legend{grid-template-columns:repeat(2,1fr)}
+    .ai-input .wrap{min-width:0}
+  }
+</style>
+</head>
+<body>
+<div class="page-label">Mockup · v3 · Dark</div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <div class="logo">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 20V4h7a4.5 4.5 0 0 1 1.5 8.75L18 20"/>
+          <path d="M6 12h7"/>
+        </svg>
+      </div>
+      <div class="wordmark">resolve<span>.</span></div>
+    </div>
+
+    <div class="agent-btn" title="Agent Mode">
+      <div class="inner">
+        <div class="spark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/>
+          </svg>
+        </div>
+        <div class="label">
+          <b>Agent Mode</b>
+          <small>Ask. Automate. Act.</small>
+        </div>
+        <div class="pulse"></div>
+      </div>
+    </div>
+
+    <div class="section">Workspace</div>
+    <nav class="nav">
+      <a href="#" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Dashboard
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Locations
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"/></svg>
+        Enforcement
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>
+        Reports
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/></svg>
+        Violators
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M17 3.13a4 4 0 0 1 0 7.75"/></svg>
+        User Management
+      </a>
+    </nav>
+
+    <div class="sb-foot">
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        Settings
+      </a>
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Log out
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <h1>Dashboard</h1>
+      <span class="crumb">· overview</span>
+      <div class="ai-input">
+        <div class="wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+          <input placeholder="Ask AI — e.g. “why is Pas Point down this week?”" />
+          <span class="kbd">⌘K</span>
+        </div>
+      </div>
+      <div class="seg">
+        <button class="on">Today</button>
+        <button>This Week</button>
+        <button>This Month</button>
+      </div>
+      <div class="avatar">GR</div>
+    </header>
+
+    <section class="content">
+
+      <!-- AI Insight -->
+      <div class="insights">
+        <div class="inner">
+          <span class="badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+            AI Insight
+          </span>
+          <div>
+            <h3>Revenue is <span style="color:#7ee6a5">+8.4%</span> vs last week, but <span style="color:#ff9292">Pas Point</span> is trending <span style="color:#ff9292">−12%</span>.</h3>
+            <p>Likely cause: 3 enforcement shifts missed on Tue–Wed. A rebalance plan is drafted and ready for review.</p>
+          </div>
+          <div class="actions">
+            <button class="btn ghost">Dismiss</button>
+            <button class="btn primary">Review plan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi">
+          <div class="t">Overall Month Revenue</div>
+          <div class="v">$1,903.00</div>
+          <div class="d up">▲ 12.3% vs last month</div>
+          <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#22c55e" stroke-width="2" points="0,22 10,18 20,20 30,12 40,15 50,10 60,13 70,7 80,11 90,5 100,8"/></svg>
+        </div>
+        <div class="kpi">
+          <div class="t">Current Month Loss</div>
+          <div class="v">92</div>
+          <div class="d down">▲ 4 incidents</div>
+          <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#ef4444" stroke-width="2" points="0,22 10,20 20,23 30,18 40,19 50,15 60,17 70,12 80,14 90,10 100,11"/></svg>
+        </div>
+        <div class="kpi">
+          <div class="t">Pending Revenue</div>
+          <div class="v">$1,903.00</div>
+          <div class="d">— steady</div>
+          <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#22d3ee" stroke-width="2" points="0,15 10,16 20,14 30,16 40,14 50,15 60,13 70,15 80,14 90,15 100,13"/></svg>
+        </div>
+        <div class="kpi">
+          <div class="t">Daily Revenue</div>
+          <div class="v">$595.00</div>
+          <div class="d up">▲ 6.1% avg</div>
+          <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#2dd4bf" stroke-width="2" points="0,20 10,17 20,18 30,13 40,15 50,11 60,12 70,9 80,11 90,7 100,8"/></svg>
+        </div>
+        <div class="kpi">
+          <div class="t">Daily Revenue</div>
+          <div class="v">$738.00</div>
+          <div class="d up">▲ 3.8%</div>
+          <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline fill="none" stroke="#22c55e" stroke-width="2" points="0,20 10,16 20,19 30,14 40,17 50,12 60,14 70,9 80,12 90,7 100,9"/></svg>
+        </div>
+      </div>
+
+      <!-- Revenue (wide) + Agent panel (right) -->
+      <div class="chart-row">
+        <div class="card">
+          <div class="hd">
+            <h3>Revenue</h3>
+            <span class="chip">60 days · daily</span>
+            <span class="chip">Pre Book</span>
+            <span class="chip">On Demand</span>
+            <span class="chip ai">AI forecast · next 14 days</span>
+            <div class="spacer"></div>
+            <button class="btn small">Daily</button>
+            <button class="btn small">Weekly</button>
+            <button class="btn small">Export</button>
+          </div>
+          <div class="rev-meta">
+            <div><span>60-day total</span><b>$58,214</b></div>
+            <div><span>Daily avg</span><b>$970</b></div>
+            <div><span>Best day</span><b>$1,842 · Apr 11</b></div>
+            <div><span>Forecast next 14d</span><b style="color:var(--teal-2)">$14,780 <small style="color:var(--muted);font-weight:500">± 6%</small></b></div>
+          </div>
+          <div class="rev-chart"><svg viewBox="0 0 1200 300" preserveAspectRatio="none" id="revChart"></svg></div>
+        </div>
+
+        <div class="card agent-card">
+          <div class="hdr">
+            <div class="dot">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+            </div>
+            <h3 style="margin:0;font-size:13.5px;font-weight:600">Ask the Agent</h3>
+            <span class="chip ai" style="margin-left:auto">Beta</span>
+          </div>
+          <p class="lead">Your operations copilot. Try one of these:</p>
+          <div class="prompts">
+            <button class="btn">▸ Which location is under-performing this week?</button>
+            <button class="btn">▸ Draft a weekly ops summary for the team</button>
+            <button class="btn">▸ Flag anomalies in enforcement activity</button>
+            <button class="btn">▸ Auto-rebalance shifts for next Mon–Fri</button>
+          </div>
+          <div class="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+            3 anomalies detected in the last 24h. Review in Agent Mode.
+          </div>
+        </div>
+      </div>
+
+      <!-- Location section -->
+      <div class="sec-hd">
+        <h2>Location Management</h2>
+        <span class="chip ai">AI-ranked</span>
+        <div class="right">
+          <div class="tabs" id="locTabs">
+            <button class="on" data-f="all">All <span class="count">6</span></button>
+            <button data-f="gated">Gated <span class="count">3</span></button>
+            <button data-f="gateless">Gateless <span class="count">2</span></button>
+            <button data-f="valet">Valet <span class="count">1</span></button>
+          </div>
+          <button class="btn">Filter</button>
+          <button class="btn primary">+ Add Location</button>
+        </div>
+      </div>
+
+      <div class="palette">
+        <span class="it"><i style="background:var(--seg-paid)"></i> Paid Transient</span>
+        <span class="it"><i style="background:var(--seg-valid)"></i> Validated</span>
+        <span class="it"><i style="background:var(--seg-monthly)"></i> Monthly Parkers</span>
+        <span class="it"><i style="background:var(--seg-grace)"></i> Grace Period</span>
+        <span class="it"><i style="background:var(--seg-white)"></i> White List</span>
+        <span class="note">Segments total 100% of parked vehicles.</span>
+      </div>
+
+      <div class="gauges" id="locGrid"></div>
+
+      <div class="agent-peek">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg></div>
+        <p><b>Agent Mode</b> is watching 6 locations. It flags anomalies and drafts actions you approve in one click.</p>
+        <button class="btn primary">Open Agent</button>
+      </div>
+
+    </section>
+
+    <div class="compare">Reference mockup for Figma file <code>DjajGwynGL75W7BizoNa7M</code> · node 2062-515 · v3 dark · cyan→teal→green AI palette</div>
+  </main>
+</div>
+
+<!-- Details drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop">
+  <div class="drawer" role="dialog" aria-modal="true">
+    <button class="btn small ghost close" onclick="closeDrawer()">Close ✕</button>
+    <h3 id="drawerTitle">Location details</h3>
+    <div id="drawerBody"></div>
+  </div>
+</div>
+
+<script>
+/* ── Revenue chart ── */
+(function(){
+  const svg = document.getElementById('revChart');
+  const W = 1200, H = 300, pad = {l:40,r:14,t:14,b:24};
+  const innerW = W - pad.l - pad.r, innerH = H - pad.t - pad.b;
+  const actualDays = 60, forecastDays = 14, total = actualDays+forecastDays;
+  const rnd = (seed=>()=>((seed=(seed*9301+49297)%233280)/233280))(42);
+  const series = []; let base = 700;
+  for(let i=0;i<total;i++){
+    base += (rnd()-0.45)*24;
+    const weekly = Math.sin((i/7)*Math.PI*2)*90;
+    const trend = i*3.1;
+    series.push(Math.max(420, base+weekly+trend+(rnd()-.5)*80));
+  }
+  const maxV = Math.max(...series)*1.08, minV = Math.min(...series)*0.85;
+  const x = i => pad.l + (i/(total-1))*innerW;
+  const y = v => pad.t + innerH - ((v-minV)/(maxV-minV))*innerH;
+  const toPath = pts => pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const actualPts = series.slice(0,actualDays).map((v,i)=>[x(i),y(v)]);
+  const forecastPts = series.slice(actualDays-1).map((v,i)=>[x(actualDays-1+i),y(v)]);
+  const areaPath = toPath(actualPts)+` L ${actualPts[actualPts.length-1][0].toFixed(1)},${pad.t+innerH} L ${actualPts[0][0].toFixed(1)},${pad.t+innerH} Z`;
+  const forecastArea = toPath(forecastPts)+` L ${forecastPts[forecastPts.length-1][0].toFixed(1)},${pad.t+innerH} L ${forecastPts[0][0].toFixed(1)},${pad.t+innerH} Z`;
+
+  let grid = '';
+  for(let i=0;i<=5;i++){
+    const ty = pad.t + (i/5)*innerH, tv = maxV - (i/5)*(maxV-minV);
+    grid += `<line x1="${pad.l}" y1="${ty}" x2="${W-pad.r}" y2="${ty}" stroke="#232c36" stroke-dasharray="3 4"/>`;
+    grid += `<text x="${pad.l-8}" y="${ty+4}" font-size="10" fill="#6b7785" text-anchor="end">$${Math.round(tv)}</text>`;
+  }
+  let xlabels = '';
+  const today = new Date();
+  for(let i=0;i<total;i+=10){
+    const d = new Date(today); d.setDate(today.getDate()-(actualDays-1)+i);
+    xlabels += `<text x="${x(i)}" y="${H-6}" font-size="10" fill="#6b7785" text-anchor="middle">${(d.getMonth()+1)+'/'+d.getDate()}</text>`;
+  }
+  const fbX = x(actualDays-1);
+  let bestIdx = 0; series.slice(0,actualDays).forEach((v,i)=>{ if(v>series[bestIdx]) bestIdx = i; });
+  const bestDot = `<circle cx="${x(bestIdx).toFixed(1)}" cy="${y(series[bestIdx]).toFixed(1)}" r="4.5" fill="#22c55e" stroke="#0c0f12" stroke-width="2"/>`;
+  const bestLabel = `<g><rect x="${(x(bestIdx)-44).toFixed(1)}" y="${(y(series[bestIdx])-28).toFixed(1)}" width="88" height="20" rx="6" fill="#16a34a"/><text x="${x(bestIdx).toFixed(1)}" y="${(y(series[bestIdx])-14).toFixed(1)}" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">Best · $${Math.round(series[bestIdx])}</text></g>`;
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="actualArea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#22c55e" stop-opacity=".38"/>
+        <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="forecastArea" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".32"/>
+        <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${grid}
+    <rect x="${fbX}" y="${pad.t}" width="${(W-pad.r)-fbX}" height="${innerH}" fill="#2dd4bf" fill-opacity=".05"/>
+    <line x1="${fbX}" y1="${pad.t}" x2="${fbX}" y2="${pad.t+innerH}" stroke="#2dd4bf" stroke-dasharray="4 4" stroke-opacity=".7"/>
+    <text x="${fbX+6}" y="${pad.t+12}" font-size="10" fill="#2dd4bf" font-weight="600">AI forecast →</text>
+    <path d="${areaPath}" fill="url(#actualArea)"/>
+    <path d="${toPath(actualPts)}" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <path d="${forecastArea}" fill="url(#forecastArea)"/>
+    <path d="${toPath(forecastPts)}" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 4"/>
+    ${bestDot}
+    ${bestLabel}
+    ${xlabels}`;
+})();
+
+/* ── Location data ── */
+const SEG = {
+  paid:   {label:'Paid Transient',  color:'#22c55e'},
+  valid:  {label:'Validated',       color:'#22d3ee'},
+  monthly:{label:'Monthly Parkers', color:'#f59e0b'},
+  grace:  {label:'Grace Period',    color:'#94a3b8'},
+  white:  {label:'White List',      color:'#2dd4bf'},
+};
+
+const LOCATIONS = [
+  { name:'Test Location',      type:'gated',    featured:true,
+    occ:56, mix:{paid:42, valid:18, monthly:22, grace:8, white:10},
+    compliance:92, onDemand:312, preBook:180,
+    carsIn:482, carsOut:426, revToday:592, trend:+12.3,
+    aiNote:'Demand peaks Fri 4–6pm — consider +1 enforcement slot.' },
+  { name:'Pas Point',          type:'gateless', featured:false,
+    occ:34, mix:{paid:28, valid:12, monthly:34, grace:18, white:8},
+    compliance:71, onDemand:104, preBook:82,
+    carsIn:221, carsOut:238, revToday:186, trend:-12.0,
+    aiNote:'Compliance fell 9pts this week — enforcement gap Tue–Wed.' },
+  { name:'Toast Stop',         type:'gated',    featured:false,
+    occ:78, mix:{paid:36, valid:22, monthly:20, grace:10, white:12},
+    compliance:88, onDemand:264, preBook:210,
+    carsIn:612, carsOut:598, revToday:474, trend:+6.8 },
+  { name:'302 Extended Avg',   type:'valet',    featured:false,
+    occ:68, mix:{paid:30, valid:14, monthly:28, grace:12, white:16},
+    compliance:84, onDemand:188, preBook:242,
+    carsIn:342, carsOut:330, revToday:430, trend:+3.2 },
+  { name:'Fitness Japan & BTP',type:'gateless', featured:false,
+    occ:41, mix:{paid:25, valid:20, monthly:30, grace:15, white:10},
+    compliance:76, onDemand:96,  preBook:142,
+    carsIn:198, carsOut:210, revToday:238, trend:+1.1 },
+  { name:'Fitness WFM',        type:'gated',    featured:false,
+    occ:82, mix:{paid:40, valid:24, monthly:18, grace:6,  white:12},
+    compliance:91, onDemand:302, preBook:196,
+    carsIn:548, carsOut:540, revToday:498, trend:+4.9 },
+];
+
+/* Multi-ring donut: outer = 5 parker segments (=100%), middle = compliance, inner = occupancy.
+   Hero v1 vibe preserved (three rings, glow), consistent colors across all cards. */
+function donutSVG(l){
+  const cx=86, cy=86;
+  /* Ring hierarchy: outer = richest data (mix, thickest), mid = compliance (thinner),
+     inner = occupancy halo (thinnest). Clear visual weight falloff from outside in. */
+  const rings = {outer:{r:72,w:14}, mid:{r:52,w:8}, inner:{r:36,w:5}};
+  const circ = r => 2*Math.PI*r;
+  const order = ['paid','valid','monthly','grace','white'];
+  const gapDeg = 1.2;
+  let rot = -90;
+  let outer = '';
+  order.forEach(k=>{
+    const pct = l.mix[k]||0; if(pct<=0) return;
+    const deg = (pct/100)*360 - gapDeg;
+    const dash = (deg/360)*circ(rings.outer.r);
+    outer += `<circle cx="${cx}" cy="${cy}" r="${rings.outer.r}" fill="none"
+      stroke="${SEG[k].color}" stroke-width="${rings.outer.w}" stroke-linecap="butt"
+      stroke-dasharray="${dash.toFixed(2)} ${(circ(rings.outer.r)-dash).toFixed(2)}"
+      transform="rotate(${rot} ${cx} ${cy})"/>`;
+    rot += (pct/100)*360;
+  });
+  const complianceDash = (l.compliance/100)*circ(rings.mid.r);
+  const occDash = (l.occ/100)*circ(rings.inner.r);
+  return `
+    <svg viewBox="0 0 172 172">
+      <defs>
+        <linearGradient id="g-mid-${l.name.replace(/\\s+/g,'')}" x1="0" x2="1">
+          <stop offset="0%" stop-color="#22d3ee"/><stop offset="100%" stop-color="#2dd4bf"/>
+        </linearGradient>
+        <linearGradient id="g-in-${l.name.replace(/\\s+/g,'')}" x1="0" x2="1">
+          <stop offset="0%" stop-color="#2dd4bf"/><stop offset="100%" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <!-- track rings -->
+      <circle cx="${cx}" cy="${cy}" r="${rings.outer.r}" fill="none" stroke="#1f2731" stroke-width="${rings.outer.w}"/>
+      <circle cx="${cx}" cy="${cy}" r="${rings.mid.r}"   fill="none" stroke="#1f2731" stroke-width="${rings.mid.w}"/>
+      <circle cx="${cx}" cy="${cy}" r="${rings.inner.r}" fill="none" stroke="#1f2731" stroke-width="${rings.inner.w}"/>
+      <!-- outer: parker mix -->
+      ${outer}
+      <!-- middle: compliance -->
+      <circle cx="${cx}" cy="${cy}" r="${rings.mid.r}" fill="none"
+        stroke="url(#g-mid-${l.name.replace(/\\s+/g,'')})" stroke-width="${rings.mid.w}" stroke-linecap="round"
+        stroke-dasharray="${complianceDash.toFixed(2)} ${(circ(rings.mid.r)-complianceDash).toFixed(2)}"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <!-- inner: occupancy -->
+      <circle cx="${cx}" cy="${cy}" r="${rings.inner.r}" fill="none"
+        stroke="url(#g-in-${l.name.replace(/\\s+/g,'')})" stroke-width="${rings.inner.w}" stroke-linecap="round"
+        stroke-dasharray="${occDash.toFixed(2)} ${(circ(rings.inner.r)-occDash).toFixed(2)}"
+        transform="rotate(-90 ${cx} ${cy})"/>
+    </svg>`;
+}
+
+function renderCards(filter){
+  const grid = document.getElementById('locGrid');
+  const items = LOCATIONS.filter(l => filter==='all' || l.type===filter);
+  grid.innerHTML = items.map(cardHTML).join('');
+  grid.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>openDrawer(b.dataset.more)));
+}
+
+function cardHTML(l){
+  const typeLabel = ({gated:'Gated',gateless:'Gateless',valet:'Valet'})[l.type];
+  const trendCls = l.trend>=0?'up':'down';
+  const trendSign = l.trend>=0?'▲':'▼';
+  return `
+  <div class="gauge ${l.featured?'featured':''}" data-type="${l.type}">
+    <div class="g-title">
+      <b>${l.name}</b>
+      <span class="live"></span>
+      <span class="type">${typeLabel}</span>
+      ${l.featured?'<span class="chip ai" style="margin-left:auto">Top performer</span>':''}
+    </div>
+
+    <div class="g-body">
+      <div class="g-donut">
+        ${donutSVG(l)}
+        <div class="center">
+          <div class="primary">${l.occ}%</div>
+          <div class="primary-label">Occupancy</div>
+          <div class="divider"></div>
+          <div class="secondary">${l.compliance}%</div>
+          <div class="secondary-label">Compliance</div>
+        </div>
+      </div>
+      <div class="g-stats">
+        <div class="stat-row">
+          <div><div class="lbl">Compliance</div><div class="sub">Paid vs total</div></div>
+          <div class="val">${l.compliance}%</div>
+        </div>
+        <div class="stat-row">
+          <div><div class="lbl">On Demand</div><div class="sub">Today</div></div>
+          <div class="val">$${l.onDemand}</div>
+        </div>
+        <div class="stat-row">
+          <div><div class="lbl">Pre Book</div><div class="sub">Today</div></div>
+          <div class="val">$${l.preBook}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="g-legend">
+      ${['paid','valid','monthly','grace','white'].map(k=>`
+        <div class="it">
+          <span class="sw"><i style="background:${SEG[k].color}"></i>${SEG[k].label}</span>
+          <span class="pct">${l.mix[k]}%</span>
+        </div>`).join('')}
+    </div>
+
+    ${l.aiNote?`<div class="ai-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+      AI: ${l.aiNote}
+    </div>`:''}
+
+    <div class="g-foot">
+      <span class="trend ${trendCls}">${trendSign} ${Math.abs(l.trend).toFixed(1)}% vs last week</span>
+      <button class="btn small more" data-more="${l.name}">More details →</button>
+    </div>
+  </div>`;
+}
+
+/* ── Drawer ── */
+function openDrawer(name){
+  const l = LOCATIONS.find(x=>x.name===name);
+  const b = document.getElementById('drawerBackdrop');
+  document.getElementById('drawerTitle').textContent = l.name + ' · details';
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="row"><span>Location type</span><b>${({gated:'Gated',gateless:'Gateless',valet:'Valet'})[l.type]}</b></div>
+    <div class="row"><span>Occupancy</span><b>${l.occ}%</b></div>
+    <div class="row"><span>Compliance</span><b>${l.compliance}%</b></div>
+    <div class="row"><span>On Demand · today</span><b>$${l.onDemand}</b></div>
+    <div class="row"><span>Pre Book · today</span><b>$${l.preBook}</b></div>
+    <div class="row"><span>Total cars in</span><b>${l.carsIn}</b></div>
+    <div class="row"><span>Total cars out</span><b>${l.carsOut}</b></div>
+    <div class="row"><span>Net inside</span><b>${l.carsIn - l.carsOut}</b></div>
+    <div class="row"><span>Revenue · today</span><b>$${l.revToday}</b></div>
+    <div class="row"><span>Week-over-week</span><b style="color:${l.trend>=0?'#7ee6a5':'#ff9292'}">${l.trend>=0?'+':''}${l.trend}%</b></div>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--ai-grad-soft);border:1px solid rgba(45,212,191,.25);border-radius:10px;color:var(--text);font-size:12.5px">
+      <b style="color:var(--teal-2)">AI summary</b><br/>
+      Based on the last 14 days at ${l.name}, peak demand falls on weekdays 4–6pm. Compliance is ${l.compliance>85?'healthy':'below target'}; monthly parkers account for ${l.mix.monthly}% of occupancy. Suggested action: ${l.compliance>85?'increase pre-book caps on Fridays':'add one enforcement pass Tue–Wed afternoon'}.
+    </div>`;
+  b.classList.add('on');
+}
+function closeDrawer(){ document.getElementById('drawerBackdrop').classList.remove('on'); }
+document.getElementById('drawerBackdrop').addEventListener('click',e=>{ if(e.target.id==='drawerBackdrop') closeDrawer(); });
+
+document.querySelectorAll('#locTabs button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('#locTabs button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    renderCards(b.dataset.f);
+  });
+});
+
+renderCards('all');
+</script>
+</body>
+</html>

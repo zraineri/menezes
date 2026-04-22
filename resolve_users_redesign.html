@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Resolve — Users & Permissions (AI Redesign)</title>
+<style>
+  :root{
+    --bg:#0c0f12; --bg-2:#11161b; --panel:#151b22; --panel-2:#1a2129;
+    --border:#232c36; --border-soft:#1c242d; --muted:#8a95a1;
+    --text:#e6edf3; --text-dim:#b6bfca;
+    --green:#22c55e; --green-2:#16a34a; --green-soft:rgba(34,197,94,.15);
+    --teal:#14b8a6; --teal-2:#2dd4bf; --cyan:#22d3ee;
+    --amber:#f59e0b; --slate:#94a3b8; --rose:#ef4444; --rose-soft:rgba(239,68,68,.12);
+    --ai-grad: linear-gradient(135deg, #22d3ee 0%, #2dd4bf 50%, #22c55e 100%);
+    --ai-grad-soft: linear-gradient(135deg, rgba(34,211,238,.14), rgba(45,212,191,.12), rgba(34,197,94,.14));
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  body{background:radial-gradient(1100px 500px at 85% -10%, rgba(20,184,166,.08), transparent 60%),radial-gradient(900px 500px at -5% 110%, rgba(34,211,238,.06), transparent 60%),var(--bg);min-height:100vh}
+  .page-label{position:fixed;top:14px;right:14px;font-size:10.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;z-index:20;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+
+  .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  .sb{background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 10px;gap:4px;position:sticky;top:0;height:100vh}
+  .logo{display:flex;align-items:center;gap:10px;padding:4px 10px 14px}
+  .logo .mark{width:32px;height:32px;border-radius:9px;background:var(--ai-grad);display:grid;place-items:center;box-shadow:0 8px 20px -10px rgba(45,212,191,.6), inset 0 0 0 1px rgba(255,255,255,.12)}
+  .logo .mark svg{width:17px;height:17px;color:#0a141b}
+  .logo .wordmark{font-weight:700;letter-spacing:-.01em;font-size:17px;color:#f1f5f9}
+  .logo .wordmark span{color:var(--green)}
+
+  .agent-btn{margin:2px 2px 2px;position:relative;padding:2px;border-radius:12px;background:var(--ai-grad);box-shadow:0 10px 24px -14px rgba(45,212,191,.7), 0 0 0 1px rgba(255,255,255,.04)}
+  .agent-btn .inner{background:linear-gradient(180deg,#121820,#0e141a);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;color:#eaf2ff;cursor:pointer}
+  .agent-btn .inner:hover{background:linear-gradient(180deg,#152230,#0f1820)}
+  .agent-btn .spark{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  .agent-btn .spark svg{width:13px;height:13px;color:#fff}
+  .agent-btn .label{display:flex;flex-direction:column;line-height:1.1}
+  .agent-btn .label b{font-size:13px;font-weight:600}
+  .agent-btn .label small{color:#9fb0c2;font-size:10.5px;letter-spacing:.02em}
+  .agent-btn .pulse{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--teal-2);box-shadow:0 0 0 0 rgba(45,212,191,.7);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,212,191,.7)}70%{box-shadow:0 0 0 10px rgba(45,212,191,0)}}
+
+  .section{font-size:10px;letter-spacing:.14em;color:#5b6773;text-transform:uppercase;padding:14px 10px 6px;font-weight:600}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-weight:500;font-size:13px;position:relative}
+  .nav a:hover{background:#1a2129;color:var(--text)}
+  .nav a.active{background:linear-gradient(180deg,rgba(34,197,94,.18),rgba(34,197,94,.06));color:#d7fbe4}
+  .nav a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--green)}
+  .nav a svg{width:16px;height:16px;opacity:.9}
+  .sb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px;border-top:1px dashed #222a33}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(12,15,18,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:18px;margin:0;font-weight:600;letter-spacing:-.005em}
+  .crumb{color:var(--muted);font-size:12px}
+  .ai-input{display:flex;align-items:center;gap:8px;padding:2px;background:var(--ai-grad);border-radius:999px;margin-left:auto}
+  .ai-input .wrap{background:#0f141a;border-radius:999px;padding:7px 12px;display:flex;align-items:center;gap:8px;min-width:290px}
+  .ai-input input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:12.5px}
+  .ai-input input::placeholder{color:#6b7785}
+  .ai-input .kbd{font-size:10px;color:#7b8896;border:1px solid #2a333d;border-radius:5px;padding:1px 5px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2dd4bf,#22c55e);display:grid;place-items:center;color:#07130b;font-weight:700;font-size:12px}
+
+  .content{padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px}
+
+  .page-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .page-hd h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .page-hd .sub{color:var(--muted);font-size:12.5px}
+  .page-hd .right{margin-left:auto;display:flex;gap:8px}
+
+  .btn{border:1px solid var(--border);background:#111821;color:var(--text);padding:8px 12px;border-radius:9px;font-size:12px;cursor:pointer;font-weight:500}
+  .btn:hover{background:#141c26}
+  .btn.primary{background:var(--ai-grad);color:#07130b;border:0;font-weight:600}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--text-dim)}
+  .btn.small{padding:6px 10px;font-size:11.5px;border-radius:7px}
+  .btn.icon{display:inline-flex;align-items:center;gap:6px}
+  .btn.icon svg{width:13px;height:13px}
+  .btn.agent{
+    background:var(--ai-grad);
+    color:#07130b;
+    border:0;
+    font-weight:700;
+    padding:2px;
+    position:relative;
+    border-radius:9px;
+  }
+  .btn.agent .inner{background:#0f141a;color:#e6edf3;padding:7px 11px;border-radius:7px;display:flex;align-items:center;gap:7px}
+  .btn.agent .inner svg{width:13px;height:13px;color:var(--teal-2)}
+  .btn.agent:hover .inner{background:#121820}
+
+  /* AI Insight banner */
+  .insights{position:relative;border-radius:14px;padding:1px;background:var(--ai-grad)}
+  .insights .inner{background:linear-gradient(180deg,rgba(18,24,32,.95),rgba(14,18,24,.95));border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+  .insights .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:4px 8px;border-radius:999px;font-size:11px;color:#cfd8e3;letter-spacing:.04em;font-weight:500}
+  .insights h3{margin:0;font-size:14px;font-weight:600}
+  .insights p{margin:3px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.45}
+  .insights .actions{margin-left:auto;display:flex;gap:8px}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;inset:auto -20% -40% auto;width:180px;height:120px;background:radial-gradient(closest-side,rgba(34,197,94,.12),transparent 70%);pointer-events:none}
+  .kpi.teal::after{background:radial-gradient(closest-side,rgba(45,212,191,.16),transparent 70%)}
+  .kpi.cyan::after{background:radial-gradient(closest-side,rgba(34,211,238,.14),transparent 70%)}
+  .kpi.amber::after{background:radial-gradient(closest-side,rgba(245,158,11,.16),transparent 70%)}
+  .kpi.warn::after{background:radial-gradient(closest-side,rgba(239,68,68,.14),transparent 70%)}
+  .kpi .t{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+  .kpi .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+  .kpi .d{font-size:11.5px;color:var(--text-dim);margin-top:6px;font-weight:500}
+  .kpi .ico{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:7px;background:rgba(34,197,94,.12);display:grid;place-items:center;color:var(--green)}
+  .kpi.teal .ico{background:rgba(45,212,191,.14);color:var(--teal-2)}
+  .kpi.cyan .ico{background:rgba(34,211,238,.14);color:var(--cyan)}
+  .kpi.amber .ico{background:rgba(245,158,11,.14);color:var(--amber)}
+  .kpi.warn .ico{background:rgba(239,68,68,.14);color:#ff9292}
+  .kpi .ico svg{width:13px;height:13px}
+
+  /* Toolbar */
+  .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .tabs{display:inline-flex;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .tabs button{background:transparent;border:0;color:var(--text-dim);padding:7px 12px;font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .tabs button .count{font-size:10.5px;background:rgba(255,255,255,.05);padding:1px 6px;border-radius:999px;color:var(--muted)}
+  .tabs button.on{background:#e6edf3;color:#0f141a}
+  .tabs button.on .count{background:rgba(0,0,0,.1);color:#0f141a}
+  .search{display:flex;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:7px 10px;gap:8px;flex:1;min-width:260px;max-width:480px}
+  .search svg{width:14px;height:14px;color:var(--muted)}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:12.5px}
+  .search input::placeholder{color:#6b7785}
+  .select{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:9px;font-size:12px}
+
+  /* User table card */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .thead{display:grid;grid-template-columns:1.5fr 1fr .9fr 1.4fr 1fr .9fr 120px;gap:12px;padding:12px 16px;color:var(--muted);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid var(--border);background:#121820;font-weight:600}
+  .row{display:grid;grid-template-columns:1.5fr 1fr .9fr 1.4fr 1fr .9fr 120px;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-soft);align-items:center;transition:background .12s ease}
+  .row:last-child{border-bottom:0}
+  .row:hover{background:#141c26}
+  .user-cell{display:flex;align-items:center;gap:10px}
+  .u-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#07130b;font-weight:700;font-size:12px;background:linear-gradient(135deg,#2dd4bf,#22c55e);flex:0 0 auto}
+  .u-avatar.amber{background:linear-gradient(135deg,#fbbf24,#f97316)}
+  .u-avatar.cyan{background:linear-gradient(135deg,#22d3ee,#0ea5e9)}
+  .u-avatar.slate{background:linear-gradient(135deg,#94a3b8,#64748b)}
+  .u-avatar.pending{background:transparent;color:#9fb0c2;border:1px dashed #2a333d}
+  .u-info .n{font-weight:600;color:var(--text);font-size:13px}
+  .u-info .e{color:var(--muted);font-size:11.5px}
+  .cell{font-size:12.5px;color:var(--text-dim)}
+  .role-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid transparent}
+  .role-chip.admin{color:#ffd6a3;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.3)}
+  .role-chip.manager{color:#a3e4b8;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.25)}
+  .role-chip.viewer{color:#9eefff;background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.25)}
+  .role-chip.enforcer{color:#c9fff1;background:rgba(45,212,191,.12);border-color:rgba(45,212,191,.25)}
+  .role-chip.pending{color:#cfd8e3;background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.25)}
+  .loc-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .loc-chip{font-size:10.5px;color:#cfd8e3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:2px 7px;border-radius:999px}
+  .loc-chip.all{background:var(--green-soft);color:#a3e4b8;border-color:rgba(34,197,94,.25);font-weight:600}
+  .perm-sum{font-size:11.5px;color:var(--text-dim);line-height:1.35}
+  .perm-sum b{color:var(--text);font-weight:600}
+  .actions-cell{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .icon-btn{width:30px;height:30px;border-radius:8px;background:#111821;border:1px solid var(--border);display:grid;place-items:center;color:var(--text-dim);cursor:pointer}
+  .icon-btn:hover{background:#18212c;color:var(--text)}
+  .icon-btn svg{width:14px;height:14px}
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:var(--muted);font-size:12px;border-top:1px solid var(--border)}
+  .pager .pg{display:inline-flex;gap:6px;align-items:center}
+  .pager .pg button{background:var(--panel);border:1px solid var(--border);color:var(--text-dim);width:28px;height:28px;border-radius:7px;cursor:pointer}
+  .pager .pg button.on{background:var(--green);color:#07130b;border:0;font-weight:700}
+
+  /* ── WIZARD DRAWER ── */
+  .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:stretch;justify-content:flex-end;z-index:50}
+  .drawer-backdrop.on{display:flex}
+  .wizard{background:#0f141a;border-left:1px solid var(--border);width:min(680px,96vw);height:100vh;display:flex;flex-direction:column;color:var(--text)}
+  .wizard-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+  .wizard-hd h3{margin:0;font-size:16px;font-weight:700}
+  .wizard-hd .close{margin-left:auto}
+  .wizard-body{flex:1;overflow:auto;padding:18px 20px}
+  .wizard-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;background:#0c1117}
+  .wizard-ft .status{color:var(--muted);font-size:12px;margin-right:auto}
+
+  /* Stepper */
+  .stepper{display:flex;align-items:center;gap:6px;padding:10px 0 16px}
+  .step{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:500}
+  .step .num{width:22px;height:22px;border-radius:50%;background:#1a2129;border:1px solid var(--border);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .step.on{color:var(--text)}
+  .step.on .num{background:var(--ai-grad);color:#07130b;border:0}
+  .step.done .num{background:rgba(34,197,94,.18);color:#a3e4b8;border:1px solid rgba(34,197,94,.3)}
+  .step-arrow{color:#2a333d;font-size:14px;margin:0 2px}
+
+  /* Form elements */
+  .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .fld label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  .fld input[type=text], .fld input[type=email], .fld input[type=tel], .fld select, .fld textarea{
+    background:#121820;border:1px solid var(--border);color:var(--text);border-radius:9px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit
+  }
+  .fld input:focus, .fld select:focus, .fld textarea:focus{border-color:var(--teal-2);box-shadow:0 0 0 3px rgba(45,212,191,.15)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* Role selector cards */
+  .role-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .role-card{background:#121820;border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;position:relative}
+  .role-card:hover{border-color:#2a333d;background:#152028}
+  .role-card.sel{border-color:var(--teal-2);background:linear-gradient(180deg,rgba(45,212,191,.1),rgba(34,197,94,.04));box-shadow:0 0 0 2px rgba(45,212,191,.18)}
+  .role-card h4{margin:0 0 2px;font-size:13px;font-weight:700}
+  .role-card p{margin:0;color:var(--text-dim);font-size:11.5px;line-height:1.35}
+  .role-card .bullet{position:absolute;top:10px;right:10px;width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent}
+  .role-card.sel .bullet{background:var(--ai-grad);border-color:var(--teal-2)}
+  .role-card .tag{position:absolute;top:10px;left:10px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+  /* Location picker */
+  .loc-picker{border:1px solid var(--border);border-radius:10px;background:#121820;padding:12px}
+  .loc-picker .hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .loc-picker .hd strong{font-size:12.5px}
+  .loc-picker .hd .all-btn{margin-left:auto}
+  .loc-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow:auto;padding:2px}
+  .loc-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:#0f141a;border:1px solid var(--border-soft);cursor:pointer}
+  .loc-item:hover{border-color:var(--border)}
+  .loc-item.on{background:linear-gradient(180deg,rgba(45,212,191,.12),rgba(34,197,94,.04));border-color:rgba(45,212,191,.35)}
+  .loc-item .check{width:16px;height:16px;border-radius:5px;border:1px solid #2a333d;display:grid;place-items:center;flex:0 0 auto}
+  .loc-item.on .check{background:var(--ai-grad);border-color:var(--teal-2)}
+  .loc-item.on .check::after{content:"✓";font-size:10px;color:#07130b;font-weight:900}
+  .loc-item .n{font-size:12.5px;font-weight:600}
+  .loc-item .c{font-size:10.5px;color:var(--muted)}
+  .scope-tabs{display:inline-flex;background:#0f141a;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px}
+  .scope-tabs button{background:transparent;border:0;color:var(--text-dim);padding:6px 11px;font-size:11.5px;font-weight:500;cursor:pointer}
+  .scope-tabs button.on{background:var(--ai-grad);color:#07130b;font-weight:700}
+
+  /* Permissions matrix */
+  .perm-group{background:#121820;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .perm-group .gh{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#131b23;border-bottom:1px solid var(--border);cursor:pointer}
+  .perm-group .gh strong{font-size:12.5px;font-weight:700;letter-spacing:.02em}
+  .perm-group .gh .g-sub{color:var(--muted);font-size:11px;margin-left:auto}
+  .perm-group .gh .chev{color:var(--muted);transition:transform .2s}
+  .perm-group.open .gh .chev{transform:rotate(90deg)}
+  .perm-group .gb{padding:8px 0;display:none}
+  .perm-group.open .gb{display:block}
+  .perm-row{display:grid;grid-template-columns:1.4fr 1.1fr 1fr;gap:10px;align-items:center;padding:8px 14px;border-top:1px dashed var(--border-soft)}
+  .perm-row:first-child{border-top:0}
+  .perm-row .pn{font-size:12.5px;font-weight:600}
+  .perm-row .pd{font-size:11px;color:var(--muted);margin-top:1px}
+  .seg-toggle{display:inline-flex;background:#0f141a;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+  .seg-toggle button{background:transparent;border:0;color:var(--text-dim);padding:5px 9px;font-size:11px;font-weight:500;cursor:pointer}
+  .seg-toggle button.on{background:var(--ai-grad);color:#07130b;font-weight:700}
+  .seg-toggle button.on.view{background:#22d3ee}
+  .seg-toggle button.on.edit{background:#2dd4bf}
+  .seg-toggle button.on.manage{background:#22c55e}
+  .seg-toggle button.on.none{background:#374151;color:#cfd8e3}
+  .scope-mini{font-size:11px;color:var(--text-dim);background:#0f141a;border:1px solid var(--border);border-radius:7px;padding:5px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .scope-mini b{color:var(--text);font-weight:600}
+  .scope-mini:hover{border-color:var(--teal-2);color:var(--text)}
+
+  /* Review step */
+  .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .review-card{background:#121820;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .review-card h4{margin:0 0 8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+  .review-card .li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border-soft);font-size:12.5px;color:var(--text-dim)}
+  .review-card .li:last-child{border-bottom:0}
+  .review-card .li b{color:var(--text);font-weight:600}
+
+  /* ── AGENT MODAL ── */
+  .agent-modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .agent-modal-bd.on{display:flex}
+  .agent-modal{width:min(760px,96vw);max-height:92vh;overflow:auto;background:#0f141a;border-radius:16px;padding:2px;background:var(--ai-grad);box-shadow:0 30px 80px -20px rgba(45,212,191,.4)}
+  .agent-modal .inner{background:#0f141a;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .agent-hd{display:flex;align-items:center;gap:12px}
+  .agent-hd .dot{width:36px;height:36px;border-radius:10px;background:var(--ai-grad);display:grid;place-items:center;box-shadow:0 6px 16px -4px rgba(45,212,191,.55)}
+  .agent-hd .dot svg{color:#07130b;width:18px;height:18px}
+  .agent-hd h3{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em}
+  .agent-hd p{margin:2px 0 0;color:var(--text-dim);font-size:12.5px}
+  .agent-hd .close{margin-left:auto}
+
+  .prompt-box{position:relative;border-radius:12px;padding:1px;background:var(--ai-grad)}
+  .prompt-box textarea{
+    width:100%;background:#0b0f14;color:var(--text);border:0;outline:none;
+    border-radius:11px;padding:14px 16px 48px;font-size:13.5px;font-family:inherit;
+    min-height:110px;resize:vertical;line-height:1.5
+  }
+  .prompt-box .pb-ft{position:absolute;left:14px;right:14px;bottom:10px;display:flex;align-items:center;gap:8px;pointer-events:none}
+  .prompt-box .pb-ft .hint{color:var(--muted);font-size:11px}
+  .prompt-box .pb-ft .go{margin-left:auto;pointer-events:auto}
+
+  .examples{display:flex;flex-wrap:wrap;gap:6px}
+  .ex-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-dim);padding:6px 10px;border-radius:999px;font-size:11.5px;cursor:pointer}
+  .ex-chip:hover{border-color:var(--teal-2);color:var(--text);background:rgba(45,212,191,.08)}
+
+  .thinking{display:none;align-items:center;gap:10px;padding:12px 14px;background:var(--ai-grad-soft);border:1px solid rgba(45,212,191,.25);border-radius:10px;color:var(--text-dim);font-size:12.5px}
+  .thinking.on{display:flex}
+  .thinking .tspark{width:18px;height:18px;border-radius:50%;background:var(--ai-grad);animation:spin 1.3s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .parsed{display:none;flex-direction:column;gap:12px}
+  .parsed.on{display:flex}
+  .parsed .summary{background:var(--ai-grad-soft);border:1px solid rgba(45,212,191,.25);border-radius:10px;padding:12px 14px;color:var(--text);font-size:13px;line-height:1.5}
+  .parsed .summary b{color:var(--teal-2)}
+  .parsed .block{background:#121820;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .parsed .block h5{margin:0 0 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+  .parsed .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:12.5px}
+  .parsed .kv span{color:var(--muted)}
+  .parsed .kv b{color:var(--text);font-weight:600}
+  .parsed .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .parsed .chip{background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.3);color:#c9fff1;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600}
+
+  .parsed .perm-lines{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+  .parsed .perm-lines .pl{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border-soft);color:var(--text-dim)}
+  .parsed .perm-lines .pl:last-child{border-bottom:0}
+  .parsed .perm-lines .lvl{font-weight:600}
+  .parsed .perm-lines .lvl.manage{color:#a3e4b8}
+  .parsed .perm-lines .lvl.edit{color:#c9fff1}
+  .parsed .perm-lines .lvl.view{color:#9eefff}
+  .parsed .perm-lines .lvl.none{color:#6b7785}
+
+  .compare{margin-top:28px;padding:14px 20px;border-top:1px solid var(--border);color:var(--muted);font-size:11.5px}
+
+  @media (max-width:1280px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:1100px){
+    .shell{grid-template-columns:1fr}
+    .sb{position:static;height:auto}
+    .thead{display:none}
+    .row{grid-template-columns:1fr;gap:6px;padding:14px}
+    .actions-cell{justify-content:flex-start}
+    .loc-list{grid-template-columns:1fr}
+    .review-grid{grid-template-columns:1fr}
+    .perm-row{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="page-label">Mockup · Users · v1</div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V4h7a4.5 4.5 0 0 1 1.5 8.75L18 20"/><path d="M6 12h7"/></svg></div>
+      <div class="wordmark">resolve<span>.</span></div>
+    </div>
+    <div class="agent-btn" onclick="openAgent()" title="Agent Mode">
+      <div class="inner">
+        <div class="spark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+        <div class="label"><b>Agent Mode</b><small>Ask. Automate. Act.</small></div>
+        <div class="pulse"></div>
+      </div>
+    </div>
+    <div class="section">Workspace</div>
+    <nav class="nav">
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Locations</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"/></svg>Enforcement</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>Reports</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/></svg>Violators</a>
+      <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M17 3.13a4 4 0 0 1 0 7.75"/></svg>User Management</a>
+    </nav>
+    <div class="sb-foot">
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        Settings
+      </a>
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Log out
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <h1>User Management</h1>
+      <span class="crumb">· permissions</span>
+      <div class="ai-input">
+        <div class="wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+          <input placeholder="Ask AI — e.g. “show users with access to Pardee”" />
+          <span class="kbd">⌘K</span>
+        </div>
+      </div>
+      <div class="avatar">GR</div>
+    </header>
+
+    <section class="content">
+
+      <div class="page-hd">
+        <div>
+          <h2>Users &amp; Permissions</h2>
+          <div class="sub">6 users · 2 admins · 1 pending invite · granular per-location access</div>
+        </div>
+        <div class="right">
+          <button class="btn icon" onclick="alert('Bulk import')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import
+          </button>
+          <button class="btn agent" onclick="openAgent()" title="Create a user by describing them">
+            <div class="inner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+              Create with Agent
+            </div>
+          </button>
+          <button class="btn primary icon" onclick="openWizard()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New User
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Insight -->
+      <div class="insights">
+        <div class="inner">
+          <span class="badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>AI Insight</span>
+          <div>
+            <h3><span style="color:#ffd6a3">James Chen</span> hasn't logged in for <span style="color:#ffd6a3">31 days</span>. Review access?</h3>
+            <p>Agent Mode can downgrade inactive accounts to Viewer or revoke access entirely — you approve before anything changes.</p>
+          </div>
+          <div class="actions">
+            <button class="btn ghost">Dismiss</button>
+            <button class="btn primary">Review access</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/></svg></div><div class="t">Total Users</div><div class="v">6</div><div class="d">across 9 locations</div></div>
+        <div class="kpi amber"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v5M5 12l-3 2 3 2M19 12l3 2-3 2M12 3l3 3-3 3M12 3l-3 3 3 3"/></svg></div><div class="t">Admins</div><div class="v">2</div><div class="d">Full access</div></div>
+        <div class="kpi teal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div class="t">Managers</div><div class="v">2</div><div class="d">Scoped access</div></div>
+        <div class="kpi cyan"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="t">Viewers</div><div class="v">1</div><div class="d">Read-only</div></div>
+        <div class="kpi warn"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="t">Pending Invites</div><div class="v">1</div><div class="d">Last sent 2d ago</div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="tabs" id="roleTabs">
+          <button class="on" data-f="all">All <span class="count">6</span></button>
+          <button data-f="admin">Admins <span class="count">2</span></button>
+          <button data-f="manager">Managers <span class="count">2</span></button>
+          <button data-f="viewer">Viewers <span class="count">1</span></button>
+          <button data-f="pending">Pending <span class="count">1</span></button>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="userSearch" placeholder="Search by name, email, or location…" />
+        </div>
+        <select class="select">
+          <option>Sort: Recently active</option>
+          <option>Name A–Z</option>
+          <option>Role</option>
+          <option>Least active first</option>
+        </select>
+      </div>
+
+      <!-- Users table -->
+      <div class="card">
+        <div class="thead">
+          <div>User</div>
+          <div>Role</div>
+          <div>Location scope</div>
+          <div>Key permissions</div>
+          <div>Last active</div>
+          <div>Added</div>
+          <div style="text-align:right">Actions</div>
+        </div>
+        <div id="userRows"></div>
+        <div class="pager">
+          <div>Showing <strong style="color:var(--text)">1–6</strong> of <strong style="color:var(--text)">6</strong> users</div>
+          <div class="pg"><button>‹</button><button class="on">1</button><button>›</button></div>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="compare">Mockup for /admin/users · per-location permissions · Agent Mode creation · dark theme</div>
+  </main>
+</div>
+
+<!-- ========== WIZARD DRAWER ========== -->
+<div class="drawer-backdrop" id="wizBackdrop">
+  <div class="wizard">
+    <div class="wizard-hd">
+      <div class="u-avatar" style="background:var(--ai-grad);color:#07130b">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <div>
+        <h3 id="wizTitle">New User</h3>
+        <div style="color:var(--muted);font-size:11.5px">Invite a teammate and configure their access</div>
+      </div>
+      <button class="btn small ghost close" onclick="closeWizard()">Close ✕</button>
+    </div>
+
+    <div class="wizard-body">
+      <div class="stepper" id="stepper">
+        <div class="step on" data-s="1"><div class="num">1</div>Profile</div>
+        <span class="step-arrow">›</span>
+        <div class="step" data-s="2"><div class="num">2</div>Role &amp; Locations</div>
+        <span class="step-arrow">›</span>
+        <div class="step" data-s="3"><div class="num">3</div>Permissions</div>
+        <span class="step-arrow">›</span>
+        <div class="step" data-s="4"><div class="num">4</div>Review &amp; Invite</div>
+      </div>
+
+      <!-- STEP 1: PROFILE -->
+      <div class="wiz-step" data-s="1">
+        <div class="grid-2">
+          <div class="fld"><label>First name</label><input type="text" id="f_first" placeholder="e.g. Maria" /></div>
+          <div class="fld"><label>Last name</label><input type="text" id="f_last" placeholder="e.g. Hernandez" /></div>
+        </div>
+        <div class="grid-2">
+          <div class="fld"><label>Email</label><input type="email" id="f_email" placeholder="maria@company.com" /></div>
+          <div class="fld"><label>Phone (optional)</label><input type="tel" id="f_phone" placeholder="+1 ••• ••• ••••" /></div>
+        </div>
+        <div class="fld"><label>Job title (optional)</label><input type="text" id="f_title" placeholder="Operations Manager" /></div>
+        <div class="fld">
+          <label>Send invite via</label>
+          <div style="display:flex;gap:8px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px"><input type="checkbox" checked /> Email</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px"><input type="checkbox" /> SMS</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: ROLE + LOCATIONS -->
+      <div class="wiz-step" data-s="2" style="display:none">
+        <div class="fld"><label>Start from a role template</label></div>
+        <div class="role-grid">
+          <div class="role-card sel" data-role="manager">
+            <span class="tag">Common</span>
+            <span class="bullet"></span>
+            <h4>Manager</h4>
+            <p>Run day-to-day ops at their locations. Edit, enforce, and pull reports.</p>
+          </div>
+          <div class="role-card" data-role="viewer">
+            <span class="tag">Read-only</span>
+            <span class="bullet"></span>
+            <h4>Viewer</h4>
+            <p>Sees dashboards and reports, cannot modify anything.</p>
+          </div>
+          <div class="role-card" data-role="enforcer">
+            <span class="tag">Field staff</span>
+            <span class="bullet"></span>
+            <h4>Enforcer</h4>
+            <p>Issues citations and runs enforcement rounds in the mobile app.</p>
+          </div>
+          <div class="role-card" data-role="admin">
+            <span class="tag">Elevated</span>
+            <span class="bullet"></span>
+            <h4>Admin</h4>
+            <p>Full access to every location, user, and setting. Use sparingly.</p>
+          </div>
+          <div class="role-card" data-role="custom" style="grid-column:1/-1">
+            <span class="tag">Advanced</span>
+            <span class="bullet"></span>
+            <h4>Custom</h4>
+            <p>Start with nothing and pick exactly what they can do, per location.</p>
+          </div>
+        </div>
+
+        <div class="fld" style="margin-top:16px"><label>Which locations?</label></div>
+        <div class="loc-picker">
+          <div class="scope-tabs" id="scopeTabs">
+            <button class="on" data-scope="all">All locations</button>
+            <button data-scope="specific">Specific locations</button>
+            <button data-scope="none">None yet</button>
+          </div>
+          <div class="hd"><strong id="scopeSummary">Access to all 9 locations</strong><button class="btn small all-btn" onclick="toggleAllLocs()">Toggle all</button></div>
+          <div class="loc-list" id="locList"></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: PERMISSIONS -->
+      <div class="wiz-step" data-s="3" style="display:none">
+        <div class="fld"><label>Fine-tune access per module</label>
+          <p style="margin:0;color:var(--muted);font-size:11.5px">Each permission can be set to <b style="color:#6b7785">None</b>, <b style="color:#9eefff">View</b>, <b style="color:#c9fff1">Edit</b>, or <b style="color:#a3e4b8">Manage</b>. "Scope" controls which locations the permission applies to — overriding step 2 if needed.</p>
+        </div>
+        <div id="permGroups"></div>
+      </div>
+
+      <!-- STEP 4: REVIEW -->
+      <div class="wiz-step" data-s="4" style="display:none">
+        <div class="fld"><label>Review before sending invite</label></div>
+        <div class="review-grid">
+          <div class="review-card">
+            <h4>Profile</h4>
+            <div class="li"><span>Name</span><b id="rv_name">—</b></div>
+            <div class="li"><span>Email</span><b id="rv_email">—</b></div>
+            <div class="li"><span>Phone</span><b id="rv_phone">—</b></div>
+            <div class="li"><span>Title</span><b id="rv_title">—</b></div>
+          </div>
+          <div class="review-card">
+            <h4>Role &amp; scope</h4>
+            <div class="li"><span>Role</span><b id="rv_role">—</b></div>
+            <div class="li"><span>Scope</span><b id="rv_scope">—</b></div>
+            <div class="li"><span>Locations</span><b id="rv_locs">—</b></div>
+          </div>
+          <div class="review-card" style="grid-column:1/-1">
+            <h4>Permissions summary</h4>
+            <div id="rv_perms" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:12.5px"></div>
+          </div>
+        </div>
+        <div class="insights" style="margin-top:14px">
+          <div class="inner">
+            <span class="badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>AI Check</span>
+            <div>
+              <h3 id="aiCheck">Looks good — access is least-privilege and matches your role template.</h3>
+              <p>On Invite, we'll email a secure setup link and add them to the audit log.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-ft">
+      <div class="status" id="wizStatus">Step 1 of 4</div>
+      <button class="btn" id="wizBack" onclick="wizStep(-1)" disabled>← Back</button>
+      <button class="btn primary" id="wizNext" onclick="wizStep(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== AGENT MODAL ========== -->
+<div class="agent-modal-bd" id="agentBd">
+  <div class="agent-modal">
+    <div class="inner">
+      <div class="agent-hd">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg></div>
+        <div>
+          <h3>Create a user with Agent Mode</h3>
+          <p>Describe who you want to add and what they should access. Agent will parse it into a full permission set for you to review.</p>
+        </div>
+        <button class="btn small ghost close" onclick="closeAgent()">Close ✕</button>
+      </div>
+
+      <div class="prompt-box">
+        <textarea id="agentPrompt" placeholder="e.g. Add Maria Hernandez (maria@resolve.com) as a manager at Test Location and Pier Point. Let her view and edit reports, but not delete locations or manage users."></textarea>
+        <div class="pb-ft">
+          <span class="hint">Tip: include name, email, role, locations, and what they can do.</span>
+          <button class="btn primary small go" onclick="runAgent()">✨ Generate</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:6px">Try one</div>
+        <div class="examples">
+          <button class="ex-chip" onclick="setPrompt(this.textContent)">Add Maria Hernandez as a manager for Test Location and Pier Point — full reports access, no user management.</button>
+          <button class="ex-chip" onclick="setPrompt(this.textContent)">Onboard Tom Reyes as an enforcer at Pardee and Starbucks only. Can issue citations, view device reports.</button>
+          <button class="ex-chip" onclick="setPrompt(this.textContent)">Give Sarah Park read-only access to all Santa Monica locations and every report.</button>
+        </div>
+      </div>
+
+      <div class="thinking" id="agentThinking">
+        <div class="tspark"></div>
+        <div><b style="color:var(--text)">Agent is parsing your request…</b><br/>Extracting name, email, role, locations, and permissions.</div>
+      </div>
+
+      <div class="parsed" id="agentParsed">
+        <div class="summary" id="agentSummary"></div>
+        <div class="block">
+          <h5>Profile</h5>
+          <div class="kv">
+            <div><span>Name</span><br/><b id="ag_name">—</b></div>
+            <div><span>Email</span><br/><b id="ag_email">—</b></div>
+            <div><span>Role</span><br/><b id="ag_role">—</b></div>
+            <div><span>Invite via</span><br/><b>Email</b></div>
+          </div>
+        </div>
+        <div class="block">
+          <h5>Location scope</h5>
+          <div id="ag_locs" class="chips"></div>
+        </div>
+        <div class="block">
+          <h5>Permissions (parsed)</h5>
+          <div class="perm-lines" id="ag_perms"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:var(--muted);font-size:11.5px;margin-right:auto">Anything wrong? Open the full editor to adjust before sending.</span>
+          <button class="btn small" onclick="sendToWizard()">Edit in full wizard</button>
+          <button class="btn primary small" onclick="sendInvite()">✨ Send invite</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const LOCATIONS = [
+  {name:'ARC BEVERLY', city:'Beverly Hills'},
+  {name:'Uchi Sushi',  city:'West Hollywood'},
+  {name:'Starbucks',   city:'Beverly Hills'},
+  {name:'25 Rose Parking', city:'Los Angeles'},
+  {name:'909 (Garage) Parking', city:'Los Angeles'},
+  {name:'Pardee', city:'Los Angeles'},
+  {name:'Pier Point', city:'Santa Monica'},
+  {name:'Berenjak',  city:'Los Angeles'},
+  {name:'302 Colorado Ave', city:'Santa Monica'},
+];
+
+const USERS = [
+  { first:'Gustavo', last:'Ramirez', email:'gustavo@resolveparking.com', role:'admin',   scope:'all', locations:[], keyPerms:'Full access · Owner', lastActive:'just now', added:'01/12/2024', initials:'GR', color:'' },
+  { first:'Jordan',  last:'Lee',     email:'jordan@resolveparking.com',  role:'admin',   scope:'all', locations:[], keyPerms:'Full access', lastActive:'2 h ago', added:'03/02/2024', initials:'JL', color:'amber' },
+  { first:'Maria',   last:'Hernandez', email:'maria@resolveparking.com',role:'manager', scope:'specific', locations:['Test Location','Pier Point','302 Colorado Ave'], keyPerms:'Manage locations · Edit reports', lastActive:'12 min ago', added:'06/14/2024', initials:'MH', color:'' },
+  { first:'Sarah',   last:'Park',    email:'sarah@resolveparking.com',  role:'manager', scope:'specific', locations:['Uchi Sushi','ARC BEVERLY'], keyPerms:'Edit reports · No user mgmt', lastActive:'yesterday', added:'09/01/2024', initials:'SP', color:'amber' },
+  { first:'James',   last:'Chen',    email:'james@resolveparking.com',  role:'viewer',  scope:'all', locations:[], keyPerms:'Read-only reports', lastActive:'31 d ago', added:'11/20/2024', initials:'JC', color:'cyan' },
+  { first:'Tom',     last:'Reyes',   email:'tom@resolveparking.com',    role:'enforcer',scope:'specific', locations:['Pardee','Starbucks'], keyPerms:'Issue citations · View devices', lastActive:'1 h ago', added:'02/18/2025', initials:'TR', color:'slate' },
+  { first:'Alex',    last:'Kim',     email:'alex@resolveparking.com',   role:'pending', scope:'—', locations:[], keyPerms:'Invite sent · not yet accepted', lastActive:'—', added:'04/20/2026', initials:'AK', color:'pending' },
+];
+
+const ROLE_LABEL = {admin:'Admin',manager:'Manager',viewer:'Viewer',enforcer:'Enforcer',pending:'Invited',custom:'Custom'};
+
+function userRow(u){
+  const role = u.role;
+  const locEl = u.scope==='all' ? `<span class="loc-chip all">All locations</span>`
+             : u.role==='pending' ? `<span class="loc-chip">—</span>`
+             : u.locations.map(l=>`<span class="loc-chip">${l}</span>`).join('');
+  return `
+  <div class="row" data-role="${role}" data-search="${(u.first+' '+u.last+' '+u.email+' '+u.locations.join(' ')).toLowerCase()}">
+    <div class="user-cell">
+      <div class="u-avatar ${u.color}">${u.initials}</div>
+      <div class="u-info">
+        <div class="n">${u.first} ${u.last}</div>
+        <div class="e">${u.email}</div>
+      </div>
+    </div>
+    <div class="cell"><span class="role-chip ${role}">${ROLE_LABEL[role]}</span></div>
+    <div class="cell"><div class="loc-chips">${locEl}</div></div>
+    <div class="cell perm-sum">${u.keyPerms}</div>
+    <div class="cell">${u.lastActive}</div>
+    <div class="cell">${u.added}</div>
+    <div class="actions-cell">
+      <button class="icon-btn" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="icon-btn" title="Permissions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"/></svg></button>
+      <button class="icon-btn" title="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+    </div>
+  </div>`;
+}
+let currentRoleFilter='all';
+function renderUsers(){
+  const q = (document.getElementById('userSearch').value||'').toLowerCase();
+  const rows = USERS.filter(u => currentRoleFilter==='all' || u.role===currentRoleFilter)
+                     .filter(u => !q || (u.first+' '+u.last+' '+u.email+' '+u.locations.join(' ')).toLowerCase().includes(q));
+  document.getElementById('userRows').innerHTML = rows.map(userRow).join('') || `<div style="padding:28px;text-align:center;color:var(--muted)">No users match.</div>`;
+}
+document.querySelectorAll('#roleTabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#roleTabs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  currentRoleFilter = b.dataset.f;
+  renderUsers();
+}));
+document.getElementById('userSearch').addEventListener('input',renderUsers);
+
+/* ============ WIZARD ============ */
+let wizState = {
+  step:1,
+  first:'', last:'', email:'', phone:'', title:'',
+  role:'manager',
+  scope:'all',
+  selectedLocs:new Set(LOCATIONS.map(l=>l.name)),
+  perms:{}, // {groupId: {permId: {level, scope}}}
+};
+
+const PERM_SCHEMA = [
+  {id:'loc', label:'Locations', perms:[
+    {id:'view', name:'View locations', desc:'See location dashboards and live status'},
+    {id:'add',  name:'Add location',   desc:'Onboard new locations'},
+    {id:'edit', name:'Edit locations', desc:'Change settings, hours, devices'},
+    {id:'del',  name:'Delete locations', desc:'Remove locations from the system'},
+  ]},
+  {id:'cit', label:'Citations &amp; Enforcement', perms:[
+    {id:'view', name:'View citations', desc:'See issued citations'},
+    {id:'issue',name:'Issue citations', desc:'Run enforcement rounds'},
+    {id:'dispute',name:'Handle disputes', desc:'Review and resolve disputes'},
+    {id:'enforcers',name:'Manage enforcers', desc:'Add/remove enforcer staff'},
+  ]},
+  {id:'rep', label:'Reports', perms:[
+    {id:'loc',name:'Location report', desc:'Revenue, occupancy, trends per location'},
+    {id:'stp',name:'Scan-to-Pay report', desc:'On-demand and pre-book breakdowns'},
+    {id:'dsp',name:'Dispute report', desc:'Citation dispute outcomes'},
+    {id:'cmp',name:'Compare report', desc:'Side-by-side location performance'},
+    {id:'dev',name:'Device report', desc:'Device uptime, offline history'},
+    {id:'exp',name:'Export reports', desc:'Download CSV/PDF exports'},
+  ]},
+  {id:'usr', label:'User Management', perms:[
+    {id:'view',name:'View users', desc:'See teammates'},
+    {id:'add', name:'Add users', desc:'Send invitations'},
+    {id:'edit',name:'Edit permissions', desc:'Change role and access'},
+    {id:'rem', name:'Remove users', desc:'Revoke access'},
+  ]},
+  {id:'fin', label:'Financial', perms:[
+    {id:'rev', name:'View revenue', desc:'See payment totals'},
+    {id:'rfd', name:'Issue refunds', desc:'Approve ticket refunds'},
+    {id:'bank',name:'Banking info', desc:'Payouts and bank accounts'},
+  ]},
+];
+
+const ROLE_DEFAULTS = {
+  admin:   (id,p)=>({level:'manage',scope:'all'}),
+  manager: (id,p)=>{
+    if(id==='usr') return {level:'none',scope:'all'};
+    if(id==='fin' && p.id==='bank') return {level:'none',scope:'all'};
+    if(id==='fin' && p.id==='rfd') return {level:'edit',scope:'scoped'};
+    return {level:'edit',scope:'scoped'};
+  },
+  viewer:  (id,p)=>({level:'view',scope:'all'}),
+  enforcer:(id,p)=>{
+    if(id==='cit') return {level:'edit',scope:'scoped'};
+    if(id==='rep' && p.id==='dev') return {level:'view',scope:'scoped'};
+    if(id==='loc' && p.id==='view') return {level:'view',scope:'scoped'};
+    return {level:'none',scope:'all'};
+  },
+  custom:  (id,p)=>({level:'none',scope:'all'}),
+};
+
+function seedPerms(role){
+  const out = {};
+  PERM_SCHEMA.forEach(g=>{
+    out[g.id] = {};
+    g.perms.forEach(p=>{
+      out[g.id][p.id] = ROLE_DEFAULTS[role](g.id,p);
+    });
+  });
+  return out;
+}
+
+/* Render locations picker */
+function renderLocList(){
+  const list = document.getElementById('locList');
+  const disabled = wizState.scope!=='specific';
+  list.innerHTML = LOCATIONS.map(l=>{
+    const on = wizState.scope==='all' ? true : wizState.scope==='none' ? false : wizState.selectedLocs.has(l.name);
+    return `<div class="loc-item ${on?'on':''}" data-name="${l.name}" ${disabled?'style="opacity:.5;pointer-events:none"':''}>
+      <span class="check"></span>
+      <div><div class="n">${l.name}</div><div class="c">${l.city}</div></div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.loc-item').forEach(el=>el.addEventListener('click',()=>{
+    const name = el.dataset.name;
+    if(wizState.selectedLocs.has(name)) wizState.selectedLocs.delete(name); else wizState.selectedLocs.add(name);
+    renderLocList();
+    updateScopeSummary();
+  }));
+  updateScopeSummary();
+}
+function updateScopeSummary(){
+  const el = document.getElementById('scopeSummary');
+  if(wizState.scope==='all') el.textContent = `Access to all ${LOCATIONS.length} locations`;
+  else if(wizState.scope==='none') el.textContent = `No locations yet — you can assign them later`;
+  else el.textContent = `${wizState.selectedLocs.size} of ${LOCATIONS.length} locations selected`;
+}
+function toggleAllLocs(){
+  if(wizState.scope!=='specific') return;
+  if(wizState.selectedLocs.size===LOCATIONS.length) wizState.selectedLocs.clear();
+  else LOCATIONS.forEach(l=>wizState.selectedLocs.add(l.name));
+  renderLocList();
+}
+
+document.querySelectorAll('#scopeTabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#scopeTabs button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  wizState.scope = b.dataset.scope;
+  if(wizState.scope==='all') wizState.selectedLocs = new Set(LOCATIONS.map(l=>l.name));
+  if(wizState.scope==='none') wizState.selectedLocs = new Set();
+  renderLocList();
+}));
+
+document.querySelectorAll('.role-card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.role-card').forEach(x=>x.classList.remove('sel'));
+  c.classList.add('sel');
+  wizState.role = c.dataset.role;
+  wizState.perms = seedPerms(wizState.role);
+}));
+
+/* Render permission groups */
+function renderPermGroups(){
+  const host = document.getElementById('permGroups');
+  host.innerHTML = PERM_SCHEMA.map((g,gi)=>`
+    <div class="perm-group ${gi<2?'open':''}" data-g="${g.id}">
+      <div class="gh" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chev">›</span>
+        <strong>${g.label}</strong>
+        <span class="g-sub" id="gsub-${g.id}"></span>
+      </div>
+      <div class="gb">
+        ${g.perms.map(p=>`
+          <div class="perm-row" data-p="${p.id}">
+            <div><div class="pn">${p.name}</div><div class="pd">${p.desc}</div></div>
+            <div class="seg-toggle" data-sg="${g.id}" data-sp="${p.id}">
+              ${['none','view','edit','manage'].map(lv=>`<button data-lv="${lv}">${lv==='none'?'None':lv[0].toUpperCase()+lv.slice(1)}</button>`).join('')}
+            </div>
+            <div>
+              <span class="scope-mini" data-sc="${g.id}:${p.id}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <b class="sc-lbl">All locations</b>
+              </span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+  // wire up toggles
+  host.querySelectorAll('.seg-toggle').forEach(tg=>{
+    const gid = tg.dataset.sg, pid = tg.dataset.sp;
+    const cur = wizState.perms[gid][pid].level;
+    tg.querySelectorAll('button').forEach(b=>{
+      if(b.dataset.lv===cur) b.classList.add('on','_'+cur),b.classList.add(cur);
+      b.addEventListener('click',()=>{
+        tg.querySelectorAll('button').forEach(x=>x.classList.remove('on','none','view','edit','manage'));
+        b.classList.add('on',b.dataset.lv);
+        wizState.perms[gid][pid].level = b.dataset.lv;
+        updateGroupSub(gid);
+      });
+    });
+    updateGroupSub(gid);
+  });
+  host.querySelectorAll('.scope-mini').forEach(el=>{
+    const [gid,pid] = el.dataset.sc.split(':');
+    const sc = wizState.perms[gid][pid].scope;
+    el.querySelector('.sc-lbl').textContent = sc==='scoped'?`Scoped (${wizState.selectedLocs.size})`:'All locations';
+    el.addEventListener('click',()=>{
+      wizState.perms[gid][pid].scope = wizState.perms[gid][pid].scope==='all'?'scoped':'all';
+      const sc2 = wizState.perms[gid][pid].scope;
+      el.querySelector('.sc-lbl').textContent = sc2==='scoped'?`Scoped (${wizState.selectedLocs.size})`:'All locations';
+    });
+  });
+}
+function updateGroupSub(gid){
+  const counts = {none:0,view:0,edit:0,manage:0};
+  Object.values(wizState.perms[gid]).forEach(p=>counts[p.level]++);
+  const parts = [];
+  if(counts.manage) parts.push(`${counts.manage} manage`);
+  if(counts.edit)   parts.push(`${counts.edit} edit`);
+  if(counts.view)   parts.push(`${counts.view} view`);
+  if(counts.none)   parts.push(`${counts.none} none`);
+  document.getElementById('gsub-'+gid).textContent = parts.join(' · ');
+}
+
+/* Steps */
+function wizStep(dir){
+  // capture step 1 fields
+  if(wizState.step===1){
+    wizState.first = document.getElementById('f_first').value||'';
+    wizState.last  = document.getElementById('f_last').value||'';
+    wizState.email = document.getElementById('f_email').value||'';
+    wizState.phone = document.getElementById('f_phone').value||'';
+    wizState.title = document.getElementById('f_title').value||'';
+  }
+  wizState.step = Math.max(1, Math.min(4, wizState.step+dir));
+  document.querySelectorAll('.wiz-step').forEach(el=>el.style.display = parseInt(el.dataset.s)===wizState.step?'block':'none');
+  document.querySelectorAll('#stepper .step').forEach(el=>{
+    const s = parseInt(el.dataset.s);
+    el.classList.toggle('on', s===wizState.step);
+    el.classList.toggle('done', s<wizState.step);
+  });
+  document.getElementById('wizBack').disabled = wizState.step===1;
+  document.getElementById('wizNext').textContent = wizState.step===4?'✨ Send Invite':'Next →';
+  document.getElementById('wizStatus').textContent = `Step ${wizState.step} of 4`;
+  if(wizState.step===2){ renderLocList(); }
+  if(wizState.step===3){ if(Object.keys(wizState.perms).length===0) wizState.perms = seedPerms(wizState.role); renderPermGroups(); }
+  if(wizState.step===4){ renderReview(); }
+  if(wizState.step===4 && dir>0 && document.getElementById('wizNext').textContent.includes('Send Invite')){}
+}
+document.getElementById('wizNext').addEventListener('click',()=>{
+  if(wizState.step===4){ alert('✅ Invite sent to '+(wizState.email||'the new user')+'!'); closeWizard(); }
+});
+
+function renderReview(){
+  document.getElementById('rv_name').textContent  = (wizState.first+' '+wizState.last).trim() || '—';
+  document.getElementById('rv_email').textContent = wizState.email || '—';
+  document.getElementById('rv_phone').textContent = wizState.phone || '—';
+  document.getElementById('rv_title').textContent = wizState.title || '—';
+  document.getElementById('rv_role').textContent  = ROLE_LABEL[wizState.role];
+  document.getElementById('rv_scope').textContent = wizState.scope==='all'?'All locations':(wizState.scope==='specific'?'Specific':'None yet');
+  document.getElementById('rv_locs').textContent  = wizState.scope==='all' ? `${LOCATIONS.length} locations` : wizState.scope==='none' ? '—' : [...wizState.selectedLocs].join(', ');
+  const perms = [];
+  PERM_SCHEMA.forEach(g=>{
+    g.perms.forEach(p=>{
+      const st = wizState.perms[g.id]?.[p.id];
+      if(!st || st.level==='none') return;
+      perms.push(`<div><span style="color:var(--muted)">${g.label.replace('&amp;','&')} · ${p.name}</span><br/><b style="color:var(--text)">${st.level.toUpperCase()}</b> · ${st.scope==='scoped'?'scoped':'all'}</div>`);
+    });
+  });
+  document.getElementById('rv_perms').innerHTML = perms.length?perms.join(''):'<div style="color:var(--muted)">No elevated permissions set.</div>';
+}
+
+function openWizard(){
+  wizState = {step:1,first:'',last:'',email:'',phone:'',title:'',role:'manager',scope:'all',selectedLocs:new Set(LOCATIONS.map(l=>l.name)),perms:{}};
+  ['f_first','f_last','f_email','f_phone','f_title'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.role-card').forEach(x=>x.classList.toggle('sel',x.dataset.role==='manager'));
+  document.querySelectorAll('#scopeTabs button').forEach(x=>x.classList.toggle('on',x.dataset.scope==='all'));
+  document.getElementById('wizTitle').textContent = 'New User';
+  document.getElementById('wizBackdrop').classList.add('on');
+  wizStep(0);
+}
+function closeWizard(){ document.getElementById('wizBackdrop').classList.remove('on'); }
+document.getElementById('wizBackdrop').addEventListener('click',e=>{ if(e.target.id==='wizBackdrop') closeWizard(); });
+
+/* ============ AGENT MODAL ============ */
+function openAgent(){
+  document.getElementById('agentPrompt').value='';
+  document.getElementById('agentThinking').classList.remove('on');
+  document.getElementById('agentParsed').classList.remove('on');
+  document.getElementById('agentBd').classList.add('on');
+}
+function closeAgent(){ document.getElementById('agentBd').classList.remove('on'); }
+document.getElementById('agentBd').addEventListener('click',e=>{ if(e.target.id==='agentBd') closeAgent(); });
+function setPrompt(t){ document.getElementById('agentPrompt').value = t; }
+
+let lastParsed = null;
+function runAgent(){
+  const p = (document.getElementById('agentPrompt').value||'').trim();
+  if(!p) return;
+  document.getElementById('agentThinking').classList.add('on');
+  document.getElementById('agentParsed').classList.remove('on');
+  setTimeout(()=>{
+    const parsed = parsePrompt(p);
+    lastParsed = parsed;
+    document.getElementById('agentThinking').classList.remove('on');
+    document.getElementById('agentSummary').innerHTML = `<b>Here's what I'll do:</b> create <b style="color:var(--text)">${parsed.name||'the new user'}</b> as a <b style="color:var(--text)">${ROLE_LABEL[parsed.role]}</b>${parsed.locations.length?` with access to <b style="color:var(--text)">${parsed.locations.length}</b> location${parsed.locations.length>1?'s':''}`:' across all locations'}, and send the invite to <b style="color:var(--text)">${parsed.email||'their email'}</b>.`;
+    document.getElementById('ag_name').textContent  = parsed.name || 'Unknown';
+    document.getElementById('ag_email').textContent = parsed.email || '—';
+    document.getElementById('ag_role').textContent  = ROLE_LABEL[parsed.role];
+    document.getElementById('ag_locs').innerHTML    = parsed.locations.length? parsed.locations.map(l=>`<span class="chip">${l}</span>`).join('') : '<span class="chip">All locations</span>';
+    const lines = [];
+    PERM_SCHEMA.forEach(g=>{
+      g.perms.forEach(p2=>{
+        const key = g.id+'.'+p2.id;
+        const lv = parsed.perms[key] || 'none';
+        if(lv==='none' && parsed.role!=='custom' && parsed.role!=='admin') return; // skip no-access unless important
+        lines.push(`<div class="pl"><span>${g.label.replace('&amp;','&')} · ${p2.name}</span><span class="lvl ${lv}">${lv.toUpperCase()}</span></div>`);
+      });
+    });
+    document.getElementById('ag_perms').innerHTML = lines.slice(0,9).join('') + (lines.length>9?`<div class="pl"><span style="color:var(--muted)">+ ${lines.length-9} more…</span><span></span></div>`:'');
+    document.getElementById('agentParsed').classList.add('on');
+  }, 900);
+}
+
+function parsePrompt(text){
+  const t = text.toLowerCase();
+  // role
+  let role = 'manager';
+  if(/\badmin\b|\bowner\b|full access\b/.test(t)) role='admin';
+  else if(/viewer|read[- ]only/.test(t)) role='viewer';
+  else if(/enforcer|issue citation|enforcement/.test(t)) role='enforcer';
+  else if(/custom/.test(t)) role='custom';
+  // name + email
+  const emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const email = emailMatch?emailMatch[0]:'';
+  // try name: two capitalized words
+  const nameMatch = text.match(/(?:add|onboard|create|give|invite)\s+([A-Z][a-zA-Z]+)\s+([A-Z][a-zA-Z]+)/);
+  const name = nameMatch ? `${nameMatch[1]} ${nameMatch[2]}` : (email? email.split('@')[0] : '');
+  // locations — match any of the known location names
+  const matchedLocs = LOCATIONS.map(l=>l.name).filter(n=>t.includes(n.toLowerCase()));
+  // city-based matches
+  const cities = [...new Set(LOCATIONS.map(l=>l.city.toLowerCase()))];
+  cities.forEach(c=>{
+    if(t.includes(c)){
+      LOCATIONS.filter(l=>l.city.toLowerCase()===c).forEach(l=>{ if(!matchedLocs.includes(l.name)) matchedLocs.push(l.name); });
+    }
+  });
+  const locations = matchedLocs;
+  // perms — start from role defaults, then apply simple overrides
+  const seed = seedPerms(role);
+  // adjust based on phrases
+  const mentions = (frag, lvl, groupId, permId)=>{
+    if(frag.test(t)) seed[groupId][permId] = {level:lvl, scope: locations.length?'scoped':'all'};
+  };
+  mentions(/view reports|read reports|see reports|reports access/, 'view', 'rep','loc');
+  mentions(/edit reports|reports.*edit|full reports/, 'edit', 'rep','loc');
+  mentions(/manage reports/, 'manage','rep','loc');
+  mentions(/device report/, 'view','rep','dev');
+  mentions(/citations? view|view citations/, 'view','cit','view');
+  mentions(/issue citations?/,  'edit','cit','issue');
+  mentions(/no user management|no users|cannot manage users/, 'none','usr','add');
+  mentions(/no delete|can't delete|cannot delete locations?/, 'none','loc','del');
+  mentions(/no refunds|cannot refund/, 'none','fin','rfd');
+  // flatten perms
+  const flat = {};
+  PERM_SCHEMA.forEach(g=>g.perms.forEach(p=>flat[g.id+'.'+p.id] = seed[g.id][p.id].level));
+  return { name, email, role, locations, perms:flat };
+}
+
+function sendInvite(){
+  if(!lastParsed) return;
+  alert(`✅ Invite sent to ${lastParsed.name || 'the new user'}${lastParsed.email?' ('+lastParsed.email+')':''}!`);
+  closeAgent();
+}
+function sendToWizard(){
+  if(!lastParsed) return;
+  closeAgent();
+  openWizard();
+  // pre-fill
+  const [first,...rest] = (lastParsed.name||'').split(' ');
+  document.getElementById('f_first').value = first||'';
+  document.getElementById('f_last').value  = rest.join(' ');
+  document.getElementById('f_email').value = lastParsed.email||'';
+  wizState.role = lastParsed.role;
+  document.querySelectorAll('.role-card').forEach(x=>x.classList.toggle('sel',x.dataset.role===lastParsed.role));
+  if(lastParsed.locations.length){
+    wizState.scope='specific';
+    wizState.selectedLocs = new Set(lastParsed.locations);
+    document.querySelectorAll('#scopeTabs button').forEach(x=>x.classList.toggle('on',x.dataset.scope==='specific'));
+  }
+  wizState.perms = seedPerms(lastParsed.role);
+  PERM_SCHEMA.forEach(g=>g.perms.forEach(p=>{
+    const lv = lastParsed.perms[g.id+'.'+p.id];
+    if(lv) wizState.perms[g.id][p.id].level = lv;
+  }));
+}
+
+/* init */
+renderUsers();
+</script>
+</body>
+</html>
