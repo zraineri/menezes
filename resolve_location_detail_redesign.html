@@ -1,0 +1,2235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Resolve — Location Detail (AI Redesign)</title>
+<style>
+  :root{
+    --bg:#0c0f12;
+    --bg-2:#11161b;
+    --panel:#151b22;
+    --panel-2:#1a2129;
+    --border:#232c36;
+    --border-soft:#1c242d;
+    --muted:#8a95a1;
+    --text:#e6edf3;
+    --text-dim:#b6bfca;
+
+    --green:#22c55e;
+    --green-2:#16a34a;
+    --green-soft:rgba(34,197,94,.15);
+    --teal:#14b8a6;
+    --teal-2:#2dd4bf;
+    --cyan:#22d3ee;
+    --amber:#f59e0b;
+    --amber-soft:rgba(245,158,11,.14);
+    --violet:#8b5cf6;
+    --violet-soft:rgba(139,92,246,.14);
+    --slate:#94a3b8;
+    --rose:#ef4444;
+    --rose-soft:rgba(239,68,68,.12);
+
+    --ai-grad: linear-gradient(135deg, #22d3ee 0%, #2dd4bf 50%, #22c55e 100%);
+    --ai-grad-soft: linear-gradient(135deg, rgba(34,211,238,.14), rgba(45,212,191,.12), rgba(34,197,94,.14));
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  body{
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(20,184,166,.08), transparent 60%),
+      radial-gradient(900px 500px at -5% 110%, rgba(34,211,238,.06), transparent 60%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .page-label{position:fixed;top:14px;right:14px;font-size:10.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;z-index:20;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+
+  .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  .sb{background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 10px;gap:4px;position:sticky;top:0;height:100vh}
+  .logo{display:flex;align-items:center;gap:10px;padding:4px 10px 14px}
+  .logo .mark{width:32px;height:32px;border-radius:9px;background:var(--ai-grad);display:grid;place-items:center;box-shadow:0 8px 20px -10px rgba(45,212,191,.6), inset 0 0 0 1px rgba(255,255,255,.12)}
+  .logo .mark svg{width:17px;height:17px;color:#0a141b}
+  .logo .wordmark{font-weight:700;letter-spacing:-.01em;font-size:17px;color:#f1f5f9}
+  .logo .wordmark span{color:var(--green)}
+
+  .agent-btn{margin:2px 2px 2px;position:relative;padding:2px;border-radius:12px;background:var(--ai-grad);box-shadow:0 10px 24px -14px rgba(45,212,191,.7), 0 0 0 1px rgba(255,255,255,.04)}
+  .agent-btn .inner{background:linear-gradient(180deg,#121820,#0e141a);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;color:#eaf2ff;cursor:pointer}
+  .agent-btn .inner:hover{background:linear-gradient(180deg,#152230,#0f1820)}
+  .agent-btn .spark{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  .agent-btn .spark svg{width:13px;height:13px;color:#fff}
+  .agent-btn .label{display:flex;flex-direction:column;line-height:1.1}
+  .agent-btn .label b{font-size:13px;font-weight:600}
+  .agent-btn .label small{color:#9fb0c2;font-size:10.5px;letter-spacing:.02em}
+  .agent-btn .pulse{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--teal-2);box-shadow:0 0 0 0 rgba(45,212,191,.7);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,212,191,.7)}70%{box-shadow:0 0 0 10px rgba(45,212,191,0)}100%{box-shadow:0 0 0 0 rgba(45,212,191,0)}}
+
+  .section{font-size:10px;letter-spacing:.14em;color:#5b6773;text-transform:uppercase;padding:14px 10px 6px;font-weight:600}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-weight:500;font-size:13px;position:relative}
+  .nav a:hover{background:#1a2129;color:var(--text)}
+  .nav a.active{background:linear-gradient(180deg,rgba(34,197,94,.18),rgba(34,197,94,.06));color:#d7fbe4}
+  .nav a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:2px;background:var(--green)}
+  .nav a svg{width:16px;height:16px;opacity:.9}
+  .sb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:8px;border-top:1px dashed #222a33}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(12,15,18,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:18px;margin:0;font-weight:600;letter-spacing:-.005em}
+  .crumb{color:var(--muted);font-size:12px}
+  .crumb a{color:var(--teal-2);text-decoration:none}
+  .crumb a:hover{text-decoration:underline}
+  .ai-input{display:flex;align-items:center;gap:8px;padding:2px;background:var(--ai-grad);border-radius:999px;margin-left:auto}
+  .ai-input .wrap{background:#0f141a;border-radius:999px;padding:7px 12px;display:flex;align-items:center;gap:8px;min-width:320px}
+  .ai-input input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:12.5px}
+  .ai-input input::placeholder{color:#6b7785}
+  .ai-input .kbd{font-size:10px;color:#7b8896;border:1px solid #2a333d;border-radius:5px;padding:1px 5px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2dd4bf,#22c55e);display:grid;place-items:center;color:#07130b;font-weight:700;font-size:12px}
+
+  .content{padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px}
+
+  /* Page header strip */
+  .page-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .page-hd h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .page-hd .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .page-hd .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{border:1px solid var(--border);background:#111821;color:var(--text);padding:8px 12px;border-radius:9px;font-size:12px;cursor:pointer;font-weight:500}
+  .btn:hover{background:#141c26}
+  .btn.primary{background:var(--ai-grad);color:#07130b;border:0;font-weight:600}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--text-dim)}
+  .btn.small{padding:6px 10px;font-size:11.5px;border-radius:7px}
+  .btn.icon{display:inline-flex;align-items:center;gap:6px}
+  .btn.icon svg{width:13px;height:13px}
+  .btn.danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.28);color:#ff9292}
+  .btn.danger:hover{background:rgba(239,68,68,.16)}
+
+  /* Health banner */
+  .insights{position:relative;border-radius:14px;padding:1px;background:var(--ai-grad)}
+  .insights .inner{background:linear-gradient(180deg,rgba(18,24,32,.95),rgba(14,18,24,.95));border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+  .insights .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:4px 8px;border-radius:999px;font-size:11px;color:#cfd8e3;letter-spacing:.04em;font-weight:500}
+  .insights h3{margin:0;font-size:14px;font-weight:600}
+  .insights p{margin:3px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.45}
+  .insights .actions{margin-left:auto;display:flex;gap:8px}
+
+  /* Overview layout (compressed) */
+  .overview{display:grid;grid-template-columns:1fr 1.1fr 1.1fr;gap:10px;align-items:stretch}
+  .overview .card{border-radius:12px}
+  .overview .card .card-head{padding:9px 12px}
+  .overview .card .card-head h4{font-size:12px}
+  .overview .card .card-head .sub{font-size:11px}
+  .overview .card .card-body{padding:10px 12px}
+  .overview .info-card,.overview .map-card,.overview .feed-card{display:flex;flex-direction:column}
+  .info-compact{display:flex;flex-direction:column;gap:2px}
+  .info-compact .it{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--border-soft)}
+  .info-compact .it:last-child{border:0}
+  .info-compact .it .lbl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;flex:0 0 auto}
+  .info-compact .it .val{color:var(--text);font-size:12px;font-weight:500;text-align:right}
+  .info-compact .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+
+  .map-card .map-body{padding:0;flex:1;min-height:0;position:relative}
+  .map-canvas{position:relative;height:170px;overflow:hidden;border-radius:0 0 11px 11px}
+  .map-card.expanded .map-canvas{height:520px}
+
+  /* Live Feed tiles */
+  .feed-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .feed-tile{position:relative;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:1px solid var(--border);cursor:pointer}
+  .feed-tile .scene{position:absolute;inset:0;background:
+    radial-gradient(circle at 35% 45%,rgba(245,200,100,.28),transparent 42%),
+    radial-gradient(circle at 75% 60%,rgba(60,170,220,.16),transparent 50%),
+    linear-gradient(180deg,#0b1520 0%,#132234 45%,#0d1a28 100%)}
+  .feed-tile .scan{position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(45,212,191,.55),transparent);animation:scan 2.6s linear infinite}
+  @keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(110px)}}
+  .feed-tile .car{position:absolute;width:38%;height:28%;left:31%;top:45%;border-radius:4px;background:linear-gradient(180deg,#475569,#1e293b);box-shadow:inset 0 -4px 0 #0f172a, 0 2px 0 rgba(0,0,0,.3)}
+  .feed-tile .car::before,.feed-tile .car::after{content:"";position:absolute;bottom:-6px;width:10px;height:10px;border-radius:50%;background:#0b1018;border:2px solid #2a3340}
+  .feed-tile .car::before{left:6px}.feed-tile .car::after{right:6px}
+  .feed-tile .plate{position:absolute;bottom:22%;left:50%;transform:translateX(-50%);background:#f8e71c;color:#111;font-size:7px;font-weight:800;padding:1px 4px;border-radius:2px;letter-spacing:.12em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .feed-tile .lamp{position:absolute;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 12px 4px rgba(253,230,138,.6)}
+  .feed-tile .lamp.l1{top:10%;left:15%}.feed-tile .lamp.l2{top:10%;right:15%}
+  .feed-tile .gate{position:absolute;left:0;right:0;top:36%;height:3px;background:linear-gradient(90deg,#ef4444 0 8%,#f8fafc 8% 16%,#ef4444 16% 24%,#f8fafc 24% 32%,#ef4444 32% 40%,#f8fafc 40% 48%,#ef4444 48% 56%,#f8fafc 56% 64%,#ef4444 64% 72%,#f8fafc 72% 80%,#ef4444 80% 88%,#f8fafc 88% 100%)}
+  .feed-tile .live-badge{position:absolute;top:6px;left:6px;font-size:8.5px;background:#ef4444;color:#fff;padding:1.5px 6px;border-radius:4px;letter-spacing:.12em;font-weight:800;display:flex;align-items:center;gap:4px}
+  .feed-tile .live-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:#fff;animation:blinkred 1.2s infinite}
+  @keyframes blinkred{50%{opacity:.3}}
+  .feed-tile .cam-name{position:absolute;top:6px;right:6px;font-size:9px;color:#cbd5e1;background:rgba(10,15,22,.7);padding:2px 6px;border-radius:4px;font-weight:600;letter-spacing:.04em}
+  .feed-tile .ts{position:absolute;bottom:6px;left:6px;font-size:9px;color:#cbd5e1;background:rgba(10,15,22,.7);padding:2px 6px;border-radius:4px;font-family:ui-monospace;letter-spacing:.03em}
+  .feed-tile .rec{position:absolute;bottom:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.75);animation:blinkred 1.2s infinite}
+  .feed-tile:hover{border-color:var(--teal-2);box-shadow:0 0 0 1px rgba(45,212,191,.25)}
+
+  /* Suggested AI prompt chips (dashboard-style) */
+  .ai-strip{position:relative;border-radius:12px;padding:1px;background:var(--ai-grad)}
+  .ai-strip .ai-inner{background:linear-gradient(180deg,rgba(16,22,29,.96),rgba(12,16,22,.96));border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .ai-strip .ai-lead{display:flex;align-items:center;gap:10px;min-width:0;flex:0 0 auto}
+  .ai-strip .ai-lead .mark{width:28px;height:28px;border-radius:8px;background:var(--ai-grad);display:grid;place-items:center;color:#07130b;flex:0 0 auto}
+  .ai-strip .ai-lead .mark svg{width:14px;height:14px}
+  .ai-strip .ai-lead .txt b{font-size:12.5px;font-weight:600;color:var(--text);display:block;line-height:1.15}
+  .ai-strip .ai-lead .txt small{font-size:11px;color:var(--muted)}
+  .prompt-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+  .prompt-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(45,212,191,.25);background:linear-gradient(180deg,rgba(45,212,191,.08),rgba(34,197,94,.05));color:var(--text);font-size:11.5px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .prompt-chip:hover{background:linear-gradient(180deg,rgba(45,212,191,.18),rgba(34,197,94,.1));border-color:rgba(45,212,191,.5);transform:translateY(-1px)}
+  .prompt-chip svg{width:11px;height:11px;color:var(--teal-2);flex:0 0 auto}
+  .prompt-chip .hot{color:#fbc67a}
+  .prompt-chip .warn{color:#ff9292}
+
+  /* Notifications dropdown bell */
+  .notif-wrap{position:relative}
+  .notif-btn{position:relative;display:inline-flex;align-items:center;gap:6px;background:#111821;border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:9px;font-size:12px;font-weight:500;cursor:pointer}
+  .notif-btn:hover{background:#141c26}
+  .notif-btn svg{width:14px;height:14px}
+  .notif-btn .count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--rose);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+  .notif-pop{position:absolute;right:0;top:calc(100% + 8px);width:400px;max-height:520px;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px -10px rgba(0,0,0,.6);z-index:30;display:none}
+  .notif-pop.open{display:block}
+  .notif-pop .nh{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:#121820;border-radius:12px 12px 0 0;position:sticky;top:0;z-index:2}
+  .notif-pop .nh h4{margin:0;font-size:12px;font-weight:600;flex:1}
+  .notif-pop .nh .mark-all{color:var(--teal-2);font-size:11px;text-decoration:none;cursor:pointer}
+  .notif-group{padding:8px 0;border-bottom:1px solid var(--border-soft)}
+  .notif-group:last-child{border-bottom:0}
+  .notif-group .gt{padding:2px 14px 6px;font-size:9.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+  .notif-item{display:flex;gap:10px;padding:10px 14px;cursor:pointer;align-items:flex-start}
+  .notif-item:hover{background:#141c26}
+  .notif-item .thumb{width:60px;height:46px;border-radius:6px;overflow:hidden;border:1px solid var(--border);flex:0 0 auto;position:relative;background:
+    radial-gradient(circle at 40% 55%,rgba(245,200,100,.28),transparent 45%),
+    linear-gradient(180deg,#0b1520,#132234)}
+  .notif-item .thumb .carmini{position:absolute;width:60%;height:38%;left:20%;top:35%;border-radius:2px;background:linear-gradient(180deg,#475569,#1e293b)}
+  .notif-item .thumb .gatehit{position:absolute;left:0;right:0;top:40%;height:2px;background:repeating-linear-gradient(90deg,#ef4444 0 3px,#fff 3px 6px);opacity:.75}
+  .notif-item .body{flex:1;min-width:0}
+  .notif-item .body .t{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);font-weight:600}
+  .notif-item .body .t .sev{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .notif-item .body .t .sev.crit{background:rgba(239,68,68,.18);color:#ff9292;border:1px solid rgba(239,68,68,.3)}
+  .notif-item .body .t .sev.warn{background:rgba(245,158,11,.15);color:#fbc67a;border:1px solid rgba(245,158,11,.3)}
+  .notif-item .body .t .sev.info{background:rgba(34,211,238,.15);color:#9eefff;border:1px solid rgba(34,211,238,.3)}
+  .notif-item .body .m{font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.35}
+  .notif-item .body .meta{display:flex;gap:10px;font-size:10.5px;color:var(--muted);margin-top:4px;font-family:ui-monospace}
+  .notif-pop .footer{padding:10px 14px;font-size:11px;color:var(--muted);text-align:center;border-top:1px solid var(--border);background:#121820}
+  .notif-pop .footer a{color:var(--teal-2);text-decoration:none}
+
+  /* Cleaner visual rate table */
+  .rate-wrap{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .rate-thead{display:grid;grid-template-columns:42px 1fr 1fr 1fr 1fr 110px 44px;gap:10px;padding:10px 14px;background:#121820;border-bottom:1px solid var(--border);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .rate-trow{display:grid;grid-template-columns:42px 1fr 1fr 1fr 1fr 110px 44px;gap:10px;padding:10px 14px;align-items:center;border-bottom:1px solid var(--border-soft);position:relative}
+  .rate-trow:last-child{border-bottom:0}
+  .rate-trow:hover{background:#141c26}
+  .rate-trow .step{width:28px;height:28px;border-radius:50%;background:var(--ai-grad);color:#07130b;font-weight:800;display:grid;place-items:center;font-size:12px}
+  .rate-trow .dur{display:flex;gap:4px}
+  .rate-trow .dur input{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 7px;border-radius:6px;font-size:12px;font-family:inherit;width:100%}
+  .rate-trow .dur select{background:#0e141b;border:1px solid var(--border);color:var(--text-dim);padding:6px 6px;border-radius:6px;font-size:11.5px;font-family:inherit;max-width:88px}
+  .rate-trow .rate-inp{display:flex;align-items:center;gap:2px}
+  .rate-trow .rate-inp .cur{color:var(--muted);font-size:12px;padding:0 2px 0 4px}
+  .rate-trow .rate-inp input{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 7px;border-radius:6px;font-size:12px;font-family:inherit;width:100%}
+  .rate-trow .per{display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--muted)}
+  .rate-trow .per input{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 7px;border-radius:6px;font-size:12px;width:50px;text-align:center}
+  .rate-trow .cum{font-size:12.5px;color:var(--text);font-weight:600;font-family:ui-monospace}
+  .rate-trow .cum small{display:block;color:var(--muted);font-size:10.5px;font-weight:500;font-family:inherit;margin-top:1px}
+  .rate-trow .appl select{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 7px;border-radius:6px;font-size:11.5px;width:100%}
+  .rate-trow .rm{width:30px;height:30px;border-radius:7px;background:#0e141b;border:1px solid var(--border);display:grid;place-items:center;color:#8a95a1;cursor:pointer;justify-self:end}
+  .rate-trow .rm:hover{color:#ff9292;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)}
+  .rate-trow .rm svg{width:13px;height:13px}
+  .rate-foot{padding:10px 14px;background:#121820;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+  /* Rate ladder visual */
+  .rate-ladder{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px}
+  .rate-ladder .rl-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .rate-ladder .rl-head h5{margin:0;font-size:12.5px;font-weight:600}
+  .rate-ladder .rl-head .sub{font-size:11px;color:var(--muted)}
+  .rate-ladder .rl-legend{margin-left:auto;display:flex;gap:10px;font-size:10.5px;color:var(--muted)}
+  .rate-ladder .rl-legend span{display:inline-flex;align-items:center;gap:5px}
+  .rate-ladder .rl-legend .swatch{width:10px;height:10px;border-radius:2px}
+  .map-pin-ovl{position:absolute;bottom:10px;left:10px;display:flex;gap:6px;align-items:center}
+  .map-pin-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(14,20,27,.92);color:var(--text);font-size:11px;padding:5px 9px;border-radius:999px;border:1px solid var(--border);font-weight:600}
+  .map-pin-chip .d{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.22)}
+
+  .health-compact{display:flex;flex-direction:column;gap:4px}
+  .hline{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--border-soft)}
+  .hline:last-child{border:0}
+  .hline .hdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .hline.ok .hdot{background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+  .hline.warn .hdot{background:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+  .hline.bad .hdot{background:var(--rose);box-shadow:0 0 0 3px rgba(239,68,68,.22)}
+  .hline .hk{flex:1;color:var(--text);font-size:12px;font-weight:500}
+  .hline .hv{color:var(--text-dim);font-size:11.5px}
+
+  .photos-sm{grid-template-columns:repeat(4,1fr)}
+
+  /* Info card */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .card .card-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:#121820}
+  .card .card-head h4{margin:0;font-size:13px;font-weight:600}
+  .card .card-head .sub{color:var(--muted);font-size:11.5px}
+  .card .card-body{padding:14px 16px}
+
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px}
+  .info-grid .it .lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .info-grid .it .val{color:var(--text);font-size:13px;margin-top:2px;font-weight:500}
+  .info-grid .it .val .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .photo{aspect-ratio:1;border-radius:10px;border:1px solid var(--border);background:linear-gradient(135deg,#1b2430,#121821);display:grid;place-items:center;color:#3b4a5a;position:relative;overflow:hidden}
+  .photo svg{width:28px;height:28px}
+  .photo.live::after{content:"LIVE";position:absolute;top:6px;left:6px;font-size:9px;background:var(--rose);color:#fff;padding:1px 5px;border-radius:4px;letter-spacing:.08em;font-weight:700}
+  .photo.add{border:1px dashed var(--border);color:var(--teal-2);cursor:pointer;background:transparent}
+  .photo.add:hover{background:rgba(45,212,191,.06)}
+
+  /* Health card */
+  .health-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .hstat{padding:12px;border:1px solid var(--border);border-radius:10px;background:#121820;display:flex;gap:10px;align-items:flex-start}
+  .hstat .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto}
+  .hstat.ok .dot{background:var(--green);box-shadow:0 0 0 4px rgba(34,197,94,.14)}
+  .hstat.warn .dot{background:var(--amber);box-shadow:0 0 0 4px rgba(245,158,11,.14)}
+  .hstat.bad .dot{background:var(--rose);box-shadow:0 0 0 4px rgba(239,68,68,.14)}
+  .hstat .body .lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .hstat .body .v{font-size:14px;font-weight:600;color:var(--text);margin-top:2px}
+  .hstat .body small{color:var(--text-dim);font-size:11.5px}
+
+  /* Tabs container */
+  .tabs-shell{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .type-row{display:flex;align-items:center;padding:10px 14px;gap:14px;border-bottom:1px solid var(--border);background:#121820;flex-wrap:wrap}
+  .type-row .ltype{display:flex;align-items:center;gap:10px}
+  .type-row .ltype .ttl{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .type-seg{display:inline-flex;background:#0e141b;border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+  .type-seg button{background:transparent;border:0;color:var(--text-dim);padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500}
+  .type-seg button.on{background:var(--ai-grad);color:#07130b;font-weight:700}
+  .type-row .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .link{color:var(--teal-2);text-decoration:none;font-size:12px;font-weight:500}
+  .link:hover{text-decoration:underline}
+
+  .subtabs{display:flex;gap:2px;padding:8px 10px;border-bottom:1px solid var(--border);background:#101722;overflow-x:auto}
+  .subtab{background:transparent;border:0;color:var(--text-dim);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+  .subtab:hover{background:#1a2129;color:var(--text)}
+  .subtab.on{background:#1a2129;color:#d7fbe4;box-shadow:inset 0 -2px 0 var(--green)}
+  .subtab svg{width:13px;height:13px}
+
+  .panel-body{padding:16px}
+
+  /* Period filter */
+  .period{display:inline-flex;background:#0e141b;border:1px solid var(--border);border-radius:10px;padding:2px;gap:2px}
+  .period button{background:transparent;border:0;color:var(--text-dim);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px}
+  .period button.on{background:var(--text);color:#0f141a;font-weight:600}
+  .row-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .row-bar .t{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+
+  /* KPIs */
+  .kpis-5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .kpis-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .kpis-6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .kpi{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--green);opacity:.85}
+  .kpi.cyan::before{background:var(--cyan)}
+  .kpi.teal::before{background:var(--teal-2)}
+  .kpi.amber::before{background:var(--amber)}
+  .kpi.rose::before{background:var(--rose)}
+  .kpi.violet::before{background:var(--violet)}
+  .kpi .t{font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+  .kpi .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+  .kpi .v.g{color:var(--green)}
+  .kpi.cyan .v{color:var(--cyan)}
+  .kpi.amber .v{color:var(--amber)}
+  .kpi.rose .v{color:#ff9292}
+  .kpi.violet .v{color:#b49cff}
+  .kpi .d{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim);margin-top:6px;font-weight:500}
+  .kpi .d.up{color:#7ee6a5}
+  .kpi .d.down{color:#ff9292}
+  .kpi .mini-bar{margin-top:8px;height:5px;background:#0e141b;border-radius:999px;overflow:hidden;border:1px solid var(--border-soft)}
+  .kpi .mini-bar .fill{height:100%;background:var(--green)}
+  .kpi.cyan .mini-bar .fill{background:var(--cyan)}
+  .kpi.amber .mini-bar .fill{background:var(--amber)}
+  .kpi.rose .mini-bar .fill{background:var(--rose)}
+  .kpi .scale{font-size:10.5px;color:var(--muted);display:flex;justify-content:space-between;margin-top:3px}
+
+  .section-title{font-size:10.5px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* Grids for charts */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+  .chart-card{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .chart-card h5{margin:0 0 2px;font-size:13px;font-weight:600}
+  .chart-card .sub{color:var(--muted);font-size:11.5px;margin-bottom:10px}
+  .chart-card .legend{display:flex;gap:12px;font-size:11.5px;color:var(--text-dim);align-items:center;flex-wrap:wrap}
+  .chart-card .legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+
+  /* Donut with center label */
+  .donut-row{display:flex;gap:14px;align-items:center}
+  .donut-row .legend-col{flex:1;display:flex;flex-direction:column;gap:6px;font-size:12px}
+  .donut-row .legend-col .li{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border-soft)}
+  .donut-row .legend-col .li:last-child{border-bottom:0}
+  .donut-row .legend-col .li .nm{display:flex;align-items:center;gap:8px;color:var(--text-dim)}
+  .donut-row .legend-col .li .nm .dot{width:9px;height:9px;border-radius:50%}
+  .donut-row .legend-col .li .vals{display:flex;gap:10px}
+  .donut-row .legend-col .li .vals b{color:var(--text)}
+  .donut-row .legend-col .li .vals span{color:var(--muted)}
+  .center-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .center-kpi{border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:#0f151c}
+  .center-kpi .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
+  .center-kpi .v{font-size:16px;font-weight:700;color:var(--text);margin-top:2px}
+
+  /* Benchmarks table */
+  .bench{font-size:12.5px}
+  .bench .brow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border-soft)}
+  .bench .brow:last-child{border:0}
+  .bench .k{color:var(--text-dim)}
+  .bench .v{color:var(--text);font-weight:600}
+  .bench .v.good{color:#7ee6a5}
+  .bench .v.warn{color:var(--amber)}
+  .bench .v.bad{color:#ff9292}
+
+  /* Whitelist table */
+  .wl-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .search{display:flex;align-items:center;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;gap:8px;flex:1;min-width:220px;max-width:420px}
+  .search svg{width:14px;height:14px;color:var(--muted)}
+  .search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:12.5px}
+  .search input::placeholder{color:#6b7785}
+  .select{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:9px;font-size:12px}
+
+  .wl-thead{display:grid;grid-template-columns:1fr 1fr 1.5fr 1.5fr .8fr .9fr 110px;gap:10px;padding:10px 14px;color:var(--muted);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;background:#121820;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .wl-row{display:grid;grid-template-columns:1fr 1fr 1.5fr 1.5fr .8fr .9fr 110px;gap:10px;padding:12px 14px;align-items:center;border-bottom:1px solid var(--border-soft);font-size:12.5px}
+  .wl-row:last-child{border-bottom:0}
+  .wl-row:hover{background:#141c26}
+  .wl-name{display:flex;align-items:center;gap:8px}
+  .mini-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#64748b,#334155);display:grid;place-items:center;font-size:10.5px;font-weight:700;color:#e6edf3}
+  .mini-avatar.g{background:linear-gradient(135deg,#2dd4bf,#22c55e);color:#07130b}
+  .mini-avatar.c{background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#05131f}
+  .mini-avatar.a{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#1a0a05}
+  .mini-avatar.v{background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#1a0a1f}
+  .wl-name .who b{display:block;color:var(--text);font-weight:600}
+  .wl-name .who small{color:var(--muted);font-size:11px}
+
+  .daychips{display:flex;gap:3px}
+  .daychip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:3px 6px;border-radius:5px;background:#0e141b;border:1px solid var(--border);color:var(--text-dim)}
+  .daychip.on{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.35);color:#a3e4b8}
+
+  .timeslot{display:flex;flex-direction:column;gap:2px}
+  .timeslot .w{font-size:12.5px;color:var(--text);font-weight:500}
+  .timeslot .m{font-size:11px;color:var(--muted)}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;width:fit-content}
+  .pill.ok{background:var(--green-soft);color:#a3e4b8;border:1px solid rgba(34,197,94,.25)}
+  .pill.pend{background:var(--amber-soft);color:#fbc67a;border:1px solid rgba(245,158,11,.3)}
+  .pill.exp{background:var(--rose-soft);color:#ff9292;border:1px solid rgba(239,68,68,.25)}
+  .pill.mo{background:rgba(34,197,94,.12);color:#a3e4b8;border:1px solid rgba(34,197,94,.25)}
+  .pill.tr{background:rgba(245,158,11,.12);color:#fbc67a;border:1px solid rgba(245,158,11,.25)}
+  .pill.va{background:rgba(139,92,246,.14);color:#c9b8ff;border:1px solid rgba(139,92,246,.3)}
+  .pill.blk{background:rgba(239,68,68,.12);color:#ff9292;border:1px solid rgba(239,68,68,.25)}
+
+  /* Action icons */
+  .actions-cell{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .icon-btn{width:28px;height:28px;border-radius:7px;background:#0e141b;border:1px solid var(--border);display:grid;place-items:center;color:var(--text-dim);cursor:pointer}
+  .icon-btn:hover{background:#18212c;color:var(--text)}
+  .icon-btn svg{width:13px;height:13px}
+
+  /* PRICING grid */
+  .price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .price-card{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .price-card h5{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .price-card .price{font-size:24px;font-weight:700;margin-top:6px;color:var(--text)}
+  .price-card .price .cur{color:var(--muted);font-size:14px;font-weight:500;margin-right:2px}
+  .price-card .meta{font-size:11.5px;color:var(--text-dim);margin-top:4px}
+  .price-edit{display:flex;gap:6px;margin-top:10px}
+  .price-edit input{flex:1;background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:7px;font-size:12.5px;font-family:inherit}
+  .price-edit .btn{padding:6px 10px;font-size:11.5px}
+
+  .rate-builder{border:1px solid var(--border);border-radius:12px;padding:14px;background:#0f151c;margin-top:14px}
+  .rate-line{display:grid;grid-template-columns:1fr 1fr 1fr 120px 40px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--border-soft)}
+  .rate-line:last-child{border:0}
+  .rate-line .fld{display:flex;flex-direction:column;gap:3px}
+  .rate-line .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .rate-line input,.rate-line select{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:7px;font-size:12.5px;font-family:inherit}
+
+  /* Tiered rate table */
+  .tier-row{display:grid;grid-template-columns:18px 1fr 1fr 1fr 1fr 40px;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;background:#0e141b;margin-bottom:8px;position:relative}
+  .tier-row .step{width:22px;height:22px;border-radius:50%;background:var(--ai-grad);color:#07130b;font-weight:700;display:grid;place-items:center;font-size:11px}
+  .tier-row .fld{display:flex;flex-direction:column;gap:3px}
+  .tier-row .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+  .tier-row .inp-group{display:flex;gap:4px}
+  .tier-row input, .tier-row select{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:7px;font-size:12.5px;font-family:inherit;width:100%}
+  .tier-row .prefix{background:#0e141b;border:1px solid var(--border);color:var(--muted);padding:7px 9px;border-radius:7px;font-size:12px;font-family:ui-monospace}
+  .tier-row .slash{color:var(--muted);align-self:center;font-size:13px}
+
+  .tier-summary{background:linear-gradient(135deg,rgba(45,212,191,.08),rgba(34,197,94,.06));border:1px solid rgba(45,212,191,.25);border-radius:10px;padding:12px;margin-top:10px}
+  .tier-summary .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--text);font-weight:600;font-size:13px}
+  .tier-summary .line{font-size:12.5px;color:var(--text-dim);margin:3px 0}
+  .tier-summary .amt{color:#7ee6a5;font-weight:700;font-family:ui-monospace}
+
+  .overnight-card{background:#0e141b;border:1px solid var(--border);border-radius:10px;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;align-items:center;margin-top:10px;border-left:3px solid #8b5cf6}
+
+  .chip-ind{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;background:rgba(34,211,238,.1);color:#9eefff;border:1px solid rgba(34,211,238,.25);font-size:10.5px;font-weight:600}
+
+  /* VALIDATION panel styles */
+  .val-section{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+  .val-section h5{margin:0 0 2px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .val-section .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .form-grid .fld{display:flex;flex-direction:column;gap:4px}
+  .form-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  .form-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .form-grid .lbl{font-size:11px;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .form-grid .lbl .req{color:#ff9292;margin-left:2px}
+  .form-grid input,.form-grid select,.form-grid textarea{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12.5px;font-family:inherit}
+
+  .discount-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 50px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0e141b;margin-bottom:8px}
+  .discount-row .vtype{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .discount-row .vtype.time{background:rgba(34,197,94,.14);color:#a3e4b8;border:1px solid rgba(34,197,94,.3)}
+  .discount-row .vtype.amt{background:rgba(245,158,11,.14);color:#fbc67a;border:1px solid rgba(245,158,11,.3)}
+  .discount-row .vtype.pct{background:rgba(139,92,246,.14);color:#c9b8ff;border:1px solid rgba(139,92,246,.3)}
+  .discount-row .vtype.conf{background:rgba(34,211,238,.14);color:#9eefff;border:1px solid rgba(34,211,238,.3)}
+  .discount-row input,.discount-row select{background:transparent;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12.5px;font-family:inherit}
+
+  .val-type-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .val-type-card{background:#0e141b;border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:.15s;position:relative}
+  .val-type-card:hover{border-color:rgba(45,212,191,.4);background:#121a24}
+  .val-type-card.on{border-color:var(--teal-2);background:linear-gradient(135deg,rgba(45,212,191,.08),rgba(34,197,94,.04))}
+  .val-type-card .ic{width:26px;height:26px;border-radius:8px;background:rgba(45,212,191,.15);color:var(--teal-2);display:grid;place-items:center;margin-bottom:6px}
+  .val-type-card .ic svg{width:14px;height:14px}
+  .val-type-card h6{margin:0;font-size:12.5px;font-weight:700;color:var(--text)}
+  .val-type-card p{margin:2px 0 0;font-size:11px;color:var(--text-dim);line-height:1.4}
+  .val-type-card.on::after{content:"✓";position:absolute;top:8px;right:10px;color:var(--teal-2);font-weight:700}
+
+  .credit-bar{background:#0e141b;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px}
+  .credit-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;align-items:end}
+  .credit-row .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.04em;font-weight:600}
+  .credit-row .fld{display:flex;flex-direction:column;gap:4px}
+  .credit-row input,.credit-row select{background:#0e141b;border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:7px;font-size:12.5px;font-family:inherit}
+
+  .code-row{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr 50px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0e141b;margin-bottom:8px}
+  .code-row .codevalue{font-family:ui-monospace;background:rgba(45,212,191,.1);color:#8ee3d2;border:1px dashed rgba(45,212,191,.3);padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:.1em;display:inline-block;width:fit-content}
+  .code-row small{color:var(--muted);font-size:11px;display:block}
+
+  /* Blackouts */
+  .blackouts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .bl{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#0f151c}
+  .bl .icon{width:28px;height:28px;border-radius:8px;background:rgba(239,68,68,.12);color:#ff9292;display:grid;place-items:center;flex:0 0 auto}
+  .bl .icon svg{width:14px;height:14px}
+  .bl .txt b{display:block;color:var(--text)}
+  .bl .txt small{color:var(--muted);font-size:11.5px}
+  .bl .right{margin-left:auto;display:flex;gap:6px}
+
+  /* Permissions banner (agent capabilities) */
+  .agent-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px dashed rgba(45,212,191,.35);border-radius:12px;background:rgba(45,212,191,.05)}
+  .agent-bar .icon{width:28px;height:28px;border-radius:9px;background:var(--ai-grad);display:grid;place-items:center;color:#07130b;flex:0 0 auto}
+  .agent-bar .icon svg{width:14px;height:14px}
+  .agent-bar .msg b{color:var(--text)}
+  .agent-bar .msg small{display:block;color:var(--text-dim);margin-top:2px;font-size:11.5px}
+  .agent-bar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+  .perm-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:rgba(34,197,94,.1);color:#a3e4b8;border:1px solid rgba(34,197,94,.28);font-size:11px;font-weight:600}
+  .perm-chip.view{background:rgba(34,211,238,.1);color:#9eefff;border-color:rgba(34,211,238,.25)}
+  .perm-chip.none{background:rgba(239,68,68,.08);color:#ff9292;border-color:rgba(239,68,68,.25)}
+
+  /* Advanced settings grid */
+  .adv-grid{display:grid;grid-template-columns:260px 1fr;gap:16px}
+  .adv-nav{display:flex;flex-direction:column;gap:2px}
+  .adv-nav button{background:transparent;border:1px solid transparent;color:var(--text-dim);text-align:left;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-family:inherit;display:flex;align-items:center;gap:10px}
+  .adv-nav button:hover{background:#141c26;color:var(--text)}
+  .adv-nav button.on{background:#141c26;color:var(--text);border-color:var(--border)}
+  .adv-nav button svg{width:14px;height:14px;opacity:.9;color:var(--teal-2)}
+
+  .adv-panel{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .adv-panel h5{margin:0 0 4px;font-size:14px;font-weight:600}
+  .adv-panel .descr{color:var(--muted);font-size:12px;margin-bottom:14px}
+  .setting{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--border-soft)}
+  .setting:last-child{border:0}
+  .setting .copy{flex:1}
+  .setting .copy b{display:block;color:var(--text);font-size:13px}
+  .setting .copy small{color:var(--text-dim);font-size:11.5px;display:block;margin-top:2px}
+  .toggle{width:38px;height:22px;background:#1a2129;border:1px solid var(--border);border-radius:999px;position:relative;cursor:pointer;transition:.18s}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;background:#5c6773;border-radius:50%;transition:.18s}
+  .toggle.on{background:var(--green);border-color:var(--green)}
+  .toggle.on::after{left:18px;background:#07130b}
+
+  /* Bar & line chart SVG helpers */
+  .grid-line{stroke:#1e2630;stroke-dasharray:3 3}
+  .axis-txt{fill:#6b7785;font-size:10px}
+
+  /* Simulated chart bars background */
+  .daybars{display:flex;align-items:flex-end;gap:3px;height:140px;padding:0 4px}
+  .daybars .bar{flex:1;background:#22314a;border-radius:3px 3px 0 0;position:relative;transition:height .3s}
+  .daybars .bar.c{background:linear-gradient(180deg,#2dd4bf,#22c55e)}
+  .daybars .bar.p{background:#2b3a50;opacity:.65}
+  .daybars-row{display:flex;gap:3px;font-size:10px;color:var(--muted);padding:4px 4px 0}
+  .daybars-row span{flex:1;text-align:center}
+
+  .qr-wrap{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#0e141b;cursor:pointer}
+  .qr-wrap:hover{background:#141c26}
+  .qr-wrap svg{width:14px;height:14px;color:var(--teal-2)}
+
+  .status-dot{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:12px}
+  .status-dot .d{width:9px;height:9px;border-radius:50%}
+  .status-dot.ok .d{background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+  .status-dot.warn .d{background:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+  .status-dot.bad .d{background:var(--rose);box-shadow:0 0 0 3px rgba(239,68,68,.2)}
+
+  .hint-ai{font-size:11px;color:#8ee3d2;display:flex;align-items:center;gap:5px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.25);padding:3px 8px;border-radius:999px;width:fit-content}
+  .hint-ai svg{width:11px;height:11px}
+
+  /* Clickable wedge rows + Ask AI micro button */
+  .li.click{cursor:pointer;border-radius:6px;padding-left:4px;padding-right:4px;transition:background .15s}
+  .li.click:hover{background:rgba(45,212,191,.06)}
+  .li.click .more{font-size:10px;color:var(--teal-2);margin-left:6px;opacity:.7}
+  .li.click:hover .more{opacity:1}
+  .ai-mini{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#8ee3d2;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.25);padding:2px 6px;border-radius:999px;cursor:pointer;margin-left:6px;font-family:inherit;font-weight:600}
+  .ai-mini svg{width:10px;height:10px}
+  .ai-mini:hover{background:rgba(45,212,191,.15)}
+
+  .chart-head-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:2px}
+  .chart-head-row .grow{flex:1}
+
+  /* Drill-down panels */
+  .drill-panel{margin-top:10px;padding:12px;border:1px solid rgba(45,212,191,.25);border-radius:10px;background:linear-gradient(180deg,rgba(45,212,191,.05),rgba(34,197,94,.03))}
+  .drill-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .drill-head b{color:var(--text);font-size:12.5px}
+  .drill-head .close{margin-left:auto;cursor:pointer;color:var(--muted);width:20px;height:20px;border-radius:4px;display:grid;place-items:center;border:1px solid var(--border);background:#0e141b}
+  .drill-head .close:hover{color:var(--text);background:#18212c}
+  .drill-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border-soft);font-size:12.5px}
+  .drill-row:last-child{border:0}
+  .drill-row .k{display:flex;align-items:center;gap:8px;color:var(--text-dim)}
+  .drill-row .k .d{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .drill-row .v b{color:var(--text)}
+  .drill-row .v span{color:var(--muted);margin-left:6px}
+  .drill-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+
+  /* Scroll styling */
+  .tabs-shell::-webkit-scrollbar{height:6px}
+  .tabs-shell::-webkit-scrollbar-thumb{background:#222a33;border-radius:3px}
+
+  /* Hidden helpers */
+  .hide{display:none !important}
+
+  @media (max-width:1240px){
+    .kpis-5{grid-template-columns:repeat(3,1fr)}
+    .kpis-6{grid-template-columns:repeat(3,1fr)}
+    .price-grid{grid-template-columns:repeat(2,1fr)}
+    .adv-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="page-label">Mockup · Location Detail · v1</div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <div class="logo">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 20V4h7a4.5 4.5 0 0 1 1.5 8.75L18 20"/>
+          <path d="M6 12h7"/>
+        </svg>
+      </div>
+      <div class="wordmark">resolve<span>.</span></div>
+    </div>
+
+    <div class="agent-btn" title="Agent Mode">
+      <div class="inner">
+        <div class="spark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg>
+        </div>
+        <div class="label"><b>Agent Mode</b><small>Ask. Automate. Act.</small></div>
+        <div class="pulse"></div>
+      </div>
+    </div>
+
+    <div class="section">Workspace</div>
+    <nav class="nav">
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      <a href="#" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Locations</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"/></svg>Enforcement</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>Reports</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/></svg>Violators</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M17 3.13a4 4 0 0 1 0 7.75"/></svg>User Management</a>
+    </nav>
+
+    <div class="sb-foot">
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings
+      </a>
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <h1>Location Detail</h1>
+      <span class="crumb">· <a href="#">Locations</a> › 302 Colorado Ave</span>
+      <div class="ai-input">
+        <div class="wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+          <input placeholder='Ask AI — e.g. "raise monthly by 5% and whitelist staff M–F 6a–8p"' />
+          <span class="kbd">⌘K</span>
+        </div>
+      </div>
+      <div class="notif-wrap">
+        <button class="notif-btn" onclick="toggleNotif()" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="count" id="notifCount">5</span>
+        </button>
+        <div class="notif-pop" id="notifPop">
+          <div class="nh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal-2)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <h4>Alerts · 302 Colorado</h4>
+            <span class="mark-all" onclick="markAllRead()">Mark all read</span>
+          </div>
+
+          <div class="notif-group">
+            <div class="gt">⚠ Gate strikes · today (3)</div>
+            <div class="notif-item" onclick="askAi('Pull the 06:04 gate strike at Gate Entry — plate 7XYZ418, show video and send incident report')">
+              <div class="thumb"><div class="carmini"></div><div class="gatehit"></div></div>
+              <div class="body">
+                <div class="t">Gate arm struck at entry <span class="sev crit">Critical</span></div>
+                <div class="m">Plate <b style="color:#fbc67a">7XYZ418</b> · Silver Toyota Camry · tailgated behind monthly parker</div>
+                <div class="meta"><span>⏱ 06:04:12 AM</span><span>📍 Gate Entry</span><span>↻ 3rd incident</span></div>
+              </div>
+            </div>
+            <div class="notif-item" onclick="askAi('Review the 04:48 exit gate strike — plate 6DEL992 — and check if the session was paid')">
+              <div class="thumb" style="background:radial-gradient(circle at 40% 55%,rgba(245,200,100,.2),transparent 45%),linear-gradient(180deg,#0b1520,#1a1218)"><div class="carmini" style="background:linear-gradient(180deg,#334155,#0f172a)"></div><div class="gatehit"></div></div>
+              <div class="body">
+                <div class="t">Gate arm struck at exit <span class="sev crit">Critical</span></div>
+                <div class="m">Plate <b style="color:#fbc67a">6DEL992</b> · Black SUV · session unpaid at strike</div>
+                <div class="meta"><span>⏱ 04:48:07 AM</span><span>📍 Gate Exit</span><span>In: 22:11 · Out: 04:48</span></div>
+              </div>
+            </div>
+            <div class="notif-item" onclick="askAi('Show me the 02:19 entry gate hit video + LPR plate BLUE‑BTL work van')">
+              <div class="thumb" style="background:radial-gradient(circle at 55% 45%,rgba(100,180,245,.22),transparent 50%),linear-gradient(180deg,#0b1520,#102030)"><div class="carmini" style="background:linear-gradient(180deg,#1e40af,#0f172a)"></div><div class="gatehit"></div></div>
+              <div class="body">
+                <div class="t">Gate strike — delivery van <span class="sev warn">Warning</span></div>
+                <div class="m">Plate <b style="color:#fbc67a">BLUEBTL</b> · Blue Bottle vendor van · whitelisted, sensor mis‑read</div>
+                <div class="meta"><span>⏱ 02:19:44 AM</span><span>📍 Gate Entry</span><span>Vendor: Blue Bottle</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="notif-group">
+            <div class="gt">LPR &amp; system</div>
+            <div class="notif-item" onclick="askAi('Why is Validator #3 idle for 2 hours? Show merchant session timeline.')">
+              <div class="thumb" style="background:radial-gradient(circle at 50% 60%,rgba(245,158,11,.2),transparent 50%),linear-gradient(180deg,#1a1410,#0d1218)"><div style="position:absolute;left:40%;top:25%;width:20%;height:55%;background:linear-gradient(180deg,#334155,#0f172a);border-radius:2px"></div></div>
+              <div class="body">
+                <div class="t">Validator #3 idle 2h <span class="sev warn">Warning</span></div>
+                <div class="m">No merchant validations since 04:07. Blue Bottle opens at 06:00.</div>
+                <div class="meta"><span>⏱ 06:07 AM</span><span>📍 Kiosk · lobby</span></div>
+              </div>
+            </div>
+            <div class="notif-item" onclick="askAi('Show the repeat offender list — plates that hit the gate more than once this month')">
+              <div class="thumb"><div class="carmini" style="background:linear-gradient(180deg,#7c2d12,#0f172a)"></div></div>
+              <div class="body">
+                <div class="t">Repeat offender flagged <span class="sev info">Info</span></div>
+                <div class="m">Plate <b style="color:#9eefff">4KLM772</b> logged 4 unpaid exits over 30 days.</div>
+                <div class="meta"><span>⏱ Today 01:11 AM</span><span>📍 Gate Exit</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <a href="#" onclick="askAi('Open the full notification history for 302 Colorado and export as PDF')">View all alerts →</a>
+          </div>
+        </div>
+      </div>
+      <div class="avatar">GR</div>
+    </header>
+
+    <section class="content">
+
+      <!-- Page header -->
+      <div class="page-hd">
+        <div>
+          <h2>302 Colorado Ave <span style="color:var(--muted);font-weight:500;font-size:14px;margin-left:6px">· Santa Monica, CA</span></h2>
+          <div class="sub">
+            <span class="status-dot ok"><span class="d"></span> Healthy</span>
+            &nbsp;·&nbsp; 145 sessions this month &nbsp;·&nbsp; 15.4% occupancy &nbsp;·&nbsp; Last sync 2m ago
+          </div>
+        </div>
+        <div class="right">
+          <a href="#" class="link">Location link ↗</a>
+          <button class="btn icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Generate QR Code
+          </button>
+          <button class="btn icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            Advanced
+          </button>
+          <button class="btn primary icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>
+            Edit Location
+          </button>
+        </div>
+      </div>
+
+      <!-- AI suggested prompts strip (dashboard style) -->
+      <div class="ai-strip">
+        <div class="ai-inner">
+          <div class="ai-lead">
+            <div class="mark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+            </div>
+            <div class="txt">
+              <b>Ask the Agent</b>
+              <small>Revenue ▲22% · Peak 34.2% Mar 16 · 3 gate strikes today</small>
+            </div>
+          </div>
+          <div class="prompt-chips">
+            <button class="prompt-chip" onclick="askAi('Raise the $10 tier by $2 on weekends — model 30‑day revenue impact')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+              Raise weekend rate +$2
+            </button>
+            <button class="prompt-chip" onclick="askAi('Whitelist the 33 monthly parkers at 302 Colorado during peak hours (12–2 PM weekdays)')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0z"/><path d="M3 21a9 9 0 0 1 18 0"/></svg>
+              Whitelist 33 monthly parkers
+            </button>
+            <button class="prompt-chip" onclick="askAi('Shorten grace period from 15 to 10 minutes and project revenue lift')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Tune grace to 10 min
+            </button>
+            <button class="prompt-chip" onclick="askAi('Why did Validator #3 go idle for 2 hours? Pull session history and merchant activity.')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg>
+              <span class="warn">Diagnose Validator #3</span>
+            </button>
+            <button class="prompt-chip" onclick="askAi('Review today\u0027s 3 gate strike incidents at 302 Colorado — pull LPR, vehicle data, cite any repeat offenders.')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+              <span class="warn">Review 3 gate strikes</span>
+            </button>
+            <button class="prompt-chip" onclick="askAi('Blackout the lot for Nov 12 Santa Monica Pier event and notify monthly parkers 72 hours ahead')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              Blackout Nov 12 event
+            </button>
+          </div>
+          <span class="perm-chip" style="background:rgba(34,197,94,.12);color:#a3e4b8;border:1px solid rgba(34,197,94,.25);padding:4px 10px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap">● Manage Pricing · Whitelist · View</span>
+        </div>
+      </div>
+
+      <!-- Compact overview: Info+Health | Map | Live Feed -->
+      <div class="overview">
+        <!-- Location info (condensed) + compact health below -->
+        <div class="card info-card">
+          <div class="card-head">
+            <h4>Location Info</h4>
+            <span class="sub">LOC-302-CLRDO-SM</span>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+              <span class="pill ok" style="font-size:10px;padding:2px 7px">● All systems OK</span>
+              <a href="#" class="link">Edit ↗</a>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="info-compact">
+              <div class="it"><span class="lbl">Address</span><span class="val">302 Colorado Ave, Santa Monica, CA</span></div>
+              <div class="it"><span class="lbl">Phone</span><span class="val">(310) 899‑0400</span></div>
+              <div class="it"><span class="lbl">Time zone</span><span class="val">PST (UTC −8)</span></div>
+              <div class="it"><span class="lbl">Spaces</span><span class="val">500 · 3 zones</span></div>
+              <div class="it"><span class="lbl">Operator</span><span class="val">Resolve · Gustavo R.</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border-soft)">
+              <div class="hline ok" style="padding:2px 0"><span class="hdot"></span><span class="hk" style="font-size:11.5px">Gate Arm</span><span class="hv" style="font-size:10.5px">12s</span></div>
+              <div class="hline ok" style="padding:2px 0"><span class="hdot"></span><span class="hk" style="font-size:11.5px">LPR 99.8%</span><span class="hv" style="font-size:10.5px">OK</span></div>
+              <div class="hline ok" style="padding:2px 0"><span class="hdot"></span><span class="hk" style="font-size:11.5px">Stripe</span><span class="hv" style="font-size:10.5px">4m</span></div>
+              <div class="hline warn" style="padding:2px 0"><span class="hdot"></span><span class="hk" style="font-size:11.5px">Validator #3</span><span class="hv" style="font-size:10.5px">Idle 2h</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map card (compact default) -->
+        <div class="card map-card">
+          <div class="card-head">
+            <h4>Map</h4>
+            <span class="sub">34.0196° N · 118.4912° W</span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <button class="btn small icon" onclick="toggleMap()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                <span id="mapBtnLbl">Expand</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-body map-body" id="mapBody" style="padding:0">
+            <div class="map-canvas">
+              <svg viewBox="0 0 600 260" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <pattern id="mapGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a2129" stroke-width="1"/>
+                  </pattern>
+                  <radialGradient id="pinGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#22c55e" stop-opacity=".5"/>
+                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <rect width="600" height="260" fill="#0f161e"/>
+                <rect width="600" height="260" fill="url(#mapGrid)"/>
+                <path d="M0 170 L600 150" stroke="#2a3a4b" stroke-width="14"/>
+                <path d="M220 0 L260 260" stroke="#2a3a4b" stroke-width="10"/>
+                <path d="M0 90 L600 80" stroke="#22303f" stroke-width="8"/>
+                <path d="M420 0 L450 260" stroke="#22303f" stroke-width="7"/>
+                <text x="10" y="166" font-size="10" fill="#6b7785">Colorado Ave</text>
+                <text x="228" y="20" font-size="10" fill="#6b7785" transform="rotate(90 228 20)">3rd St</text>
+                <text x="430" y="18" font-size="10" fill="#6b7785" transform="rotate(90 430 18)">Ocean Ave</text>
+                <rect x="250" y="120" width="130" height="70" rx="4" fill="rgba(34,197,94,.12)" stroke="#22c55e" stroke-dasharray="4 3" stroke-width="1.5"/>
+                <text x="315" y="158" text-anchor="middle" font-size="10" fill="#7ee6a5" font-weight="700">302 Colorado</text>
+                <text x="315" y="172" text-anchor="middle" font-size="9" fill="#a3e4b8">500 spaces</text>
+                <circle cx="315" cy="155" r="28" fill="url(#pinGlow)"/>
+                <circle cx="315" cy="155" r="8" fill="#22c55e" stroke="#0f141a" stroke-width="2"/>
+              </svg>
+              <div class="map-pin-ovl">
+                <span class="map-pin-chip"><span class="d"></span> Live · 77/500</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Feed card (4 cameras) -->
+        <div class="card feed-card">
+          <div class="card-head">
+            <h4>Live Feed</h4>
+            <span class="sub">4 cameras · streaming</span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <button class="btn small icon" onclick="askAi('Show me the last 30 minutes of Gate Entry camera footage and flag any anomalies')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                Ask AI
+              </button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:8px">
+            <div class="feed-grid">
+              <div class="feed-tile" title="Gate Entry">
+                <div class="scene"></div>
+                <div class="scan"></div>
+                <div class="lamp l1"></div><div class="lamp l2"></div>
+                <div class="gate"></div>
+                <div class="car"><div class="plate">7ABC123</div></div>
+                <span class="live-badge">LIVE</span>
+                <span class="cam-name">Gate Entry</span>
+                <span class="ts">06:07:42</span>
+                <span class="rec"></span>
+              </div>
+              <div class="feed-tile" title="Gate Exit">
+                <div class="scene" style="background:
+                  radial-gradient(circle at 70% 50%,rgba(34,197,94,.2),transparent 45%),
+                  linear-gradient(180deg,#0b1520,#102030 45%,#0d1a28)"></div>
+                <div class="scan"></div>
+                <div class="lamp l1"></div><div class="lamp l2"></div>
+                <div class="gate" style="top:55%"></div>
+                <div class="car" style="left:18%;top:38%;width:30%;background:linear-gradient(180deg,#334155,#0f172a)"><div class="plate" style="left:50%">8RES221</div></div>
+                <span class="live-badge">LIVE</span>
+                <span class="cam-name">Gate Exit</span>
+                <span class="ts">06:07:42</span>
+                <span class="rec"></span>
+              </div>
+              <div class="feed-tile" title="Lot North · zone A">
+                <div class="scene" style="background:
+                  radial-gradient(circle at 50% 40%,rgba(34,211,238,.12),transparent 55%),
+                  linear-gradient(180deg,#0b1520,#0f1c2a)"></div>
+                <div class="scan"></div>
+                <div class="lamp l1"></div><div class="lamp l2"></div>
+                <div class="car" style="left:8%;top:55%;width:22%;height:20%"></div>
+                <div class="car" style="left:36%;top:55%;width:22%;height:20%;background:linear-gradient(180deg,#64748b,#1e293b)"></div>
+                <div class="car" style="left:64%;top:55%;width:22%;height:20%;background:linear-gradient(180deg,#475569,#0f172a)"></div>
+                <span class="live-badge">LIVE</span>
+                <span class="cam-name">Lot · North</span>
+                <span class="ts">06:07:42</span>
+                <span class="rec"></span>
+              </div>
+              <div class="feed-tile" title="Validator Kiosk">
+                <div class="scene" style="background:
+                  radial-gradient(circle at 50% 60%,rgba(245,158,11,.18),transparent 50%),
+                  linear-gradient(180deg,#1a1410,#0d1218)"></div>
+                <div class="scan"></div>
+                <!-- kiosk shape -->
+                <div style="position:absolute;left:40%;top:25%;width:20%;height:55%;background:linear-gradient(180deg,#334155,#0f172a);border-radius:4px;box-shadow:inset 0 -4px 0 #0b1420"></div>
+                <div style="position:absolute;left:44%;top:32%;width:12%;height:14%;background:#22d3ee;opacity:.6;border-radius:2px;animation:blinkred 2s infinite"></div>
+                <span class="live-badge">LIVE</span>
+                <span class="cam-name">Validator #3</span>
+                <span class="ts">06:07:42</span>
+                <span class="rec"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main tabs shell -->
+      <div class="tabs-shell">
+
+        <!-- Type row -->
+        <div class="type-row">
+          <div class="ltype">
+            <span class="ttl">Location Type</span>
+            <div class="type-seg" role="tablist">
+              <button class="on" onclick="setType(this,'gated')">Gated</button>
+              <button onclick="setType(this,'monthly')">Monthly</button>
+              <button onclick="setType(this,'validation')">Validation</button>
+            </div>
+          </div>
+          <div class="right">
+            <div class="qr-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span style="font-size:12px">QR Code</span>
+            </div>
+            <button class="btn small icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.2 4.2l4.3 4.3M15.5 15.5l4.3 4.3M1 12h6M17 12h6M4.2 19.8l4.3-4.3M15.5 8.5l4.3-4.3"/></svg>
+              Advanced Settings
+            </button>
+          </div>
+        </div>
+
+        <!-- Sub tabs -->
+        <div class="subtabs" id="subtabs">
+          <button class="subtab on" data-tab="summary" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            Summary
+          </button>
+          <button class="subtab" data-tab="duration" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Duration
+          </button>
+          <button class="subtab" data-tab="pricing" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+            Parking Pricing
+          </button>
+          <button class="subtab" data-tab="whitelist" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 11l-3-3m0 0l-3 3m3-3v8"/></svg>
+            Whitelist
+          </button>
+          <button class="subtab" data-tab="validation" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Validation
+          </button>
+          <button class="subtab" data-tab="advanced" onclick="setSub(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .4 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.4 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .4-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.4-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.4H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.4 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            Advanced Settings
+          </button>
+        </div>
+
+        <!-- ========== SUMMARY PANEL ========== -->
+        <div class="panel-body" id="panel-summary">
+
+          <div class="row-bar">
+            <div>
+              <span class="t">Analytics period</span>
+              <span style="color:var(--text);font-size:13px;font-weight:600;margin-left:8px">March 1 – 28, 2026</span>
+            </div>
+            <div class="period">
+              <button>Today</button>
+              <button>This Week</button>
+              <button>This Month</button>
+              <button class="on">Custom</button>
+            </div>
+          </div>
+
+          <div class="section-title">Traffic &amp; Session Metrics</div>
+          <div class="kpis-5">
+            <div class="kpi">
+              <div class="t">Total Vehicles / Sessions</div>
+              <div class="v">145</div>
+              <div class="d up">▲ 12% vs last month</div>
+            </div>
+            <div class="kpi cyan">
+              <div class="t">Active Parkers</div>
+              <div class="v">77</div>
+              <div class="mini-bar"><div class="fill" style="width:15.4%"></div></div>
+              <div class="scale"><span>0</span><span>15.4% of 500</span></div>
+            </div>
+            <div class="kpi teal">
+              <div class="t">Completed Sessions</div>
+              <div class="v">68</div>
+              <div class="d up">▲ 8% vs last month</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Entry Count</div>
+              <div class="v">163</div>
+              <div class="d">check‑ins this month</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Exit Count</div>
+              <div class="v">86</div>
+              <div class="d">check‑outs this month</div>
+            </div>
+          </div>
+
+          <div class="section-title">Customer &amp; Parker Segmentation</div>
+          <div class="grid-2">
+            <div class="chart-card">
+              <div class="chart-head-row">
+                <div class="grow">
+                  <h5>Customer Segmentation</h5>
+                  <div class="sub">Returning vs first‑time — click a slice to drill in</div>
+                </div>
+                <button class="ai-mini" onclick="askAi('Break down customer segmentation for 302 Colorado by time of day and referral source')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                  Ask AI
+                </button>
+              </div>
+              <div class="donut-row">
+                <svg viewBox="0 0 140 140" width="160" height="160">
+                  <circle cx="70" cy="70" r="52" stroke="#1e2630" stroke-width="18" fill="none"/>
+                  <circle cx="70" cy="70" r="52" stroke="#22c55e" stroke-width="18" fill="none" stroke-dasharray="200.7 326.7" transform="rotate(-90 70 70)" style="cursor:pointer" onclick="openDrill('returning')"/>
+                  <circle cx="70" cy="70" r="52" stroke="#2dd4bf" stroke-width="18" fill="none" stroke-dasharray="126.1 326.7" stroke-dashoffset="-200.7" transform="rotate(-90 70 70)" style="cursor:pointer" onclick="openDrill('newcust')"/>
+                  <text x="70" y="66" text-anchor="middle" fill="#e6edf3" font-size="22" font-weight="700">145</text>
+                  <text x="70" y="84" text-anchor="middle" fill="#8a95a1" font-size="10" letter-spacing="2">TOTAL</text>
+                </svg>
+                <div class="legend-col">
+                  <div class="li click" onclick="openDrill('returning')"><div class="nm"><span class="dot" style="background:#22c55e"></span>Returning<span class="more">▸</span></div><div class="vals"><b>89</b><span>61.4%</span></div></div>
+                  <div class="li click" onclick="openDrill('newcust')"><div class="nm"><span class="dot" style="background:#2dd4bf"></span>First‑Time / New<span class="more">▸</span></div><div class="vals"><b>56</b><span>38.6%</span></div></div>
+                  <div class="center-kpis">
+                    <div class="center-kpi"><div class="lbl">Retention</div><div class="v" style="color:#7ee6a5">61.4%</div></div>
+                    <div class="center-kpi"><div class="lbl">New This Mo</div><div class="v">56</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="drill-panel hide" id="drill-returning">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+                  <b>Returning customers · 89 drivers</b>
+                  <span style="color:var(--muted);font-size:11.5px">last 30 days</span>
+                  <span class="close" onclick="openDrill('returning')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#a3e4b8"></span>2–5 visits / month</div><div class="v"><b>52</b><span>58.4%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22c55e"></span>6–15 visits / month</div><div class="v"><b>29</b><span>32.6%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#16a34a"></span>Daily commuters (15+)</div><div class="v"><b>8</b><span>9.0%</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('Which returning customers are at churn risk at 302 Colorado?')">AI: churn risk</button>
+                  <button class="btn small" onclick="askAi('Draft a loyalty discount code for the 8 daily commuters')">AI: loyalty offer</button>
+                  <button class="btn small">Export list</button>
+                </div>
+              </div>
+
+              <div class="drill-panel hide" id="drill-newcust">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+                  <b>First‑time visitors · 56 drivers</b>
+                  <span class="close" onclick="openDrill('newcust')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#2dd4bf"></span>Walk‑up (no pre‑res)</div><div class="v"><b>38</b><span>67.9%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>Referred by merchant</div><div class="v"><b>12</b><span>21.4%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#8b5cf6"></span>From mobile app (QR)</div><div class="v"><b>6</b><span>10.7%</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('What first-time visitor source drove the most revenue?')">AI: revenue by source</button>
+                  <button class="btn small">Create welcome code</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-head-row">
+                <div class="grow">
+                  <h5>Parker Type Segmentation</h5>
+                  <div class="sub">Click Monthly for corporate vs individual breakdown</div>
+                </div>
+                <button class="ai-mini" onclick="askAi('Compare monthly parker usage: corporate vs individual this month')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                  Ask AI
+                </button>
+              </div>
+              <div class="donut-row">
+                <svg viewBox="0 0 140 140" width="160" height="160">
+                  <circle cx="70" cy="70" r="52" stroke="#1e2630" stroke-width="18" fill="none"/>
+                  <circle cx="70" cy="70" r="52" stroke="#8b5cf6" stroke-width="18" fill="none" stroke-dasharray="227.7 326.7" transform="rotate(-90 70 70)" style="cursor:pointer" onclick="openDrill('monthly')"/>
+                  <circle cx="70" cy="70" r="52" stroke="#f59e0b" stroke-width="18" fill="none" stroke-dasharray="74.5 326.7" stroke-dashoffset="-227.7" transform="rotate(-90 70 70)" style="cursor:pointer" onclick="openDrill('transient')"/>
+                  <circle cx="70" cy="70" r="52" stroke="#22d3ee" stroke-width="18" fill="none" stroke-dasharray="24.5 326.7" stroke-dashoffset="-302.2" transform="rotate(-90 70 70)" style="cursor:pointer" onclick="openDrill('validated')"/>
+                  <text x="70" y="66" text-anchor="middle" fill="#e6edf3" font-size="22" font-weight="700">145</text>
+                  <text x="70" y="84" text-anchor="middle" fill="#8a95a1" font-size="10" letter-spacing="2">CARS</text>
+                </svg>
+                <div class="legend-col">
+                  <div class="li click" onclick="openDrill('monthly')"><div class="nm"><span class="dot" style="background:#8b5cf6"></span>Monthly Parkers<span class="more">▸</span></div><div class="vals"><b>101</b><span>69.7%</span></div></div>
+                  <div class="li click" onclick="openDrill('transient')"><div class="nm"><span class="dot" style="background:#f59e0b"></span>Transient Parkers<span class="more">▸</span></div><div class="vals"><b>33</b><span>22.8%</span></div></div>
+                  <div class="li click" onclick="openDrill('validated')"><div class="nm"><span class="dot" style="background:#22d3ee"></span>Validated Parkers<span class="more">▸</span></div><div class="vals"><b>11</b><span>7.5%</span></div></div>
+                  <div class="center-kpis">
+                    <div class="center-kpi"><div class="lbl">Avg Monthly Stay</div><div class="v">28.3d</div></div>
+                    <div class="center-kpi"><div class="lbl">Avg Transient</div><div class="v">2.1h</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="drill-panel hide" id="drill-monthly">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#8b5cf6;display:inline-block"></span>
+                  <b>Monthly parkers · 101 cars</b>
+                  <span style="color:var(--muted);font-size:11.5px">Corporate vs individual usage</span>
+                  <span class="close" onclick="openDrill('monthly')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#b49cff"></span>Corporate accounts (4 orgs)</div><div class="v"><b>62 cars</b><span>61.4% · $712/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>&nbsp;&nbsp;↳ Resolve Parking Ops</div><div class="v"><b>24</b><span>$275/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>&nbsp;&nbsp;↳ ClientCorp SaaS</div><div class="v"><b>18</b><span>$207/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>&nbsp;&nbsp;↳ MerchantX Retail</div><div class="v"><b>14</b><span>$161/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>&nbsp;&nbsp;↳ Acme Logistics</div><div class="v"><b>6</b><span>$69/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#8b5cf6"></span>Individual subscribers</div><div class="v"><b>39 cars</b><span>38.6% · $438/mo</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#64748b"></span>Renewed this month</div><div class="v"><b>92</b><span>91.1% retention</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('Which corporate monthly accounts are under-utilizing their spots?')">AI: under‑utilized corp</button>
+                  <button class="btn small" onclick="askAi('Draft renewal email for 9 monthly parkers expiring this week')">AI: draft renewals</button>
+                  <button class="btn small">View roster</button>
+                </div>
+              </div>
+              <div class="drill-panel hide" id="drill-transient">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
+                  <b>Transient parkers · 33 cars</b>
+                  <span class="close" onclick="openDrill('transient')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#f59e0b"></span>Hourly rate ($10)</div><div class="v"><b>20</b><span>$200</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#ef4444"></span>Overnight / max ($80)</div><div class="v"><b>2</b><span>$30</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#fbc67a"></span>Event / surge pricing</div><div class="v"><b>11</b><span>$135</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('What hour of day drives the most transient revenue?')">AI: peak hour</button>
+                </div>
+              </div>
+              <div class="drill-panel hide" id="drill-validated">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#22d3ee;display:inline-block"></span>
+                  <b>Validated parkers · 11 cars</b>
+                  <span class="close" onclick="openDrill('validated')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>Blue Bottle Coffee · 1h free</div><div class="v"><b>6</b><span>$0</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#2dd4bf"></span>MerchantX · 50% off</div><div class="v"><b>3</b><span>$15</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#8b5cf6"></span>Event code WELCOME</div><div class="v"><b>2</b><span>$0</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('Which vendor validations drove the most incremental parking revenue?')">AI: top vendor impact</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Capacity Metrics</div>
+          <div class="kpis-6">
+            <div class="kpi"><div class="t">Total Spaces</div><div class="v">500</div><div class="d">all zones</div></div>
+            <div class="kpi amber"><div class="t">Occupied</div><div class="v">77</div><div class="mini-bar"><div class="fill" style="width:15.4%"></div></div></div>
+            <div class="kpi"><div class="t">Available</div><div class="v g">423</div><div class="mini-bar"><div class="fill" style="width:84.6%"></div></div></div>
+            <div class="kpi"><div class="t">Occupancy %</div><div class="v g">15.4%</div><div class="d">current live rate</div></div>
+            <div class="kpi"><div class="t">Avg Occupancy</div><div class="v g">12.8%</div><div class="d">period average</div></div>
+            <div class="kpi rose"><div class="t">Peak Occupancy</div><div class="v">34.2%</div><div class="d">Mar 16, 2:00 PM</div></div>
+          </div>
+
+          <div class="section-title">Revenue Metrics</div>
+          <div class="kpis-5">
+            <div class="kpi"><div class="t">Parking Revenue</div><div class="v g">$1,380.00</div><div class="d up">▲ 22% vs last mo</div></div>
+            <div class="kpi"><div class="t">Total Income</div><div class="v">$1,380.00</div><div class="d">incl. citations</div></div>
+            <div class="kpi"><div class="t">Avg Rev / Transient Space</div><div class="v">$41.82</div><div class="d">per transient space</div></div>
+            <div class="kpi amber"><div class="t">Turnover Rate</div><div class="v">1.85×</div><div class="d">space utilization / mo</div></div>
+            <div class="kpi rose"><div class="t">Citations</div><div class="v">2</div><div class="d">$10.00 total</div></div>
+          </div>
+
+          <div class="section-title">Revenue Detail</div>
+          <div class="grid-2">
+            <div class="chart-card">
+              <h5>Daily Revenue — March 2026</h5>
+              <div class="sub">This month vs last month</div>
+              <div class="legend" style="margin-bottom:8px"><span><span class="dot" style="background:#22c55e"></span>This Month</span><span><span class="dot" style="background:#3f4d5c"></span>Last Month</span></div>
+              <svg viewBox="0 0 600 220" width="100%" height="220">
+                <g>
+                  <line class="grid-line" x1="30" y1="40"  x2="590" y2="40"/>
+                  <line class="grid-line" x1="30" y1="80"  x2="590" y2="80"/>
+                  <line class="grid-line" x1="30" y1="120" x2="590" y2="120"/>
+                  <line class="grid-line" x1="30" y1="160" x2="590" y2="160"/>
+                  <line class="grid-line" x1="30" y1="200" x2="590" y2="200"/>
+                  <text class="axis-txt" x="2"  y="44">$800</text>
+                  <text class="axis-txt" x="2"  y="84">$600</text>
+                  <text class="axis-txt" x="2"  y="124">$400</text>
+                  <text class="axis-txt" x="2"  y="164">$200</text>
+                  <text class="axis-txt" x="2"  y="204">$0</text>
+                </g>
+                <!-- Bars: 28 days. Big spike on day 16 -->
+                <g id="barsGroup"></g>
+              </svg>
+              <script>
+                (function(){
+                  var g = document.getElementById('barsGroup');
+                  if(!g) return;
+                  var heights = [4,6,2,3,5,8,9,4,3,2,6,7,4,8,10,800,8,60,40,8,30,6,5,4,40,4,6,5];
+                  var lastMonth = [5,4,3,7,6,5,4,6,8,4,5,6,7,5,8,25,6,10,8,5,4,6,7,5,4,6,7,4];
+                  var maxV = 800;
+                  var step = (560)/28;
+                  var xml = '';
+                  for(var i=0;i<28;i++){
+                    var h = Math.min(160, (heights[i]/maxV)*160);
+                    var hp = Math.min(160, (lastMonth[i]/maxV)*160);
+                    var x = 30 + i*step + 4;
+                    // Last month bar (behind)
+                    xml += '<rect x="'+(x+step*0.5)+'" y="'+(200-hp)+'" width="'+(step*0.35)+'" height="'+hp+'" fill="#3f4d5c" opacity=".65" rx="1"/>';
+                    // This month bar
+                    xml += '<rect x="'+x+'" y="'+(200-h)+'" width="'+(step*0.35)+'" height="'+h+'" fill="#22c55e" rx="1"/>';
+                    if(i%3===0){ xml += '<text class="axis-txt" x="'+(x+step*0.25)+'" y="215" text-anchor="middle">'+(i+1)+'</text>'; }
+                  }
+                  g.innerHTML = xml;
+                })();
+              </script>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-head-row">
+                <div class="grow">
+                  <h5>Revenue Breakdown</h5>
+                  <div class="sub">By rate tier · click a row to see what's inside</div>
+                </div>
+                <button class="ai-mini" onclick="askAi('Explain why 79 cars paid $0 at 302 Colorado and project next month')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                  Ask AI
+                </button>
+              </div>
+              <div class="donut-row">
+                <svg viewBox="0 0 180 180" width="190" height="190">
+                  <circle cx="90" cy="90" r="66" stroke="#1e2630" stroke-width="22" fill="none"/>
+                  <circle cx="90" cy="90" r="66" stroke="#8b5cf6" stroke-width="22" fill="none" stroke-dasharray="345.3 414.7" transform="rotate(-90 90 90)" style="cursor:pointer" onclick="openDrill('rev50')"/>
+                  <circle cx="90" cy="90" r="66" stroke="#f59e0b" stroke-width="22" fill="none" stroke-dasharray="60.1 414.7" stroke-dashoffset="-345.3" transform="rotate(-90 90 90)" style="cursor:pointer" onclick="openDrill('rev10')"/>
+                  <circle cx="90" cy="90" r="66" stroke="#ef4444" stroke-width="22" fill="none" stroke-dasharray="9.3 414.7" stroke-dashoffset="-405.4" transform="rotate(-90 90 90)" style="cursor:pointer" onclick="openDrill('rev80')"/>
+                  <text x="90" y="86" text-anchor="middle" fill="#e6edf3" font-size="22" font-weight="700">$1,380</text>
+                  <text x="90" y="104" text-anchor="middle" fill="#8a95a1" font-size="10" letter-spacing="2">TOTAL</text>
+                </svg>
+                <div class="legend-col">
+                  <div class="li click" onclick="openDrill('rev0')"><div class="nm"><span class="dot" style="background:#a3e4b8"></span>$0.00<span class="more">▸</span></div><div class="vals"><b>79 cars</b><span>$0.00</span></div></div>
+                  <div class="li click" onclick="openDrill('rev10')"><div class="nm"><span class="dot" style="background:#f59e0b"></span>$10.00<span class="more">▸</span></div><div class="vals"><b>20 cars</b><span>$200.00</span></div></div>
+                  <div class="li click" onclick="openDrill('rev50')"><div class="nm"><span class="dot" style="background:#8b5cf6"></span>$50.00<span class="more">▸</span></div><div class="vals"><b>33 cars</b><span>$1,150.00</span></div></div>
+                  <div class="li click" onclick="openDrill('rev80')"><div class="nm"><span class="dot" style="background:#ef4444"></span>$80.00<span class="more">▸</span></div><div class="vals"><b>2 cars</b><span>$30.00</span></div></div>
+                  <div class="li" style="border-top:1px solid var(--border);padding-top:8px"><div class="nm" style="color:var(--text);font-weight:600">Total Revenue</div><div class="vals"><b style="color:#7ee6a5">$1,380.00</b></div></div>
+                  <div class="li"><div class="nm">Cars Checked In / Out</div><div class="vals"><b>163 / 0</b></div></div>
+                </div>
+              </div>
+
+              <div class="drill-panel hide" id="drill-rev0">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#a3e4b8;display:inline-block"></span>
+                  <b>$0.00 tier · 79 cars — why nothing charged?</b>
+                  <span class="close" onclick="openDrill('rev0')">×</span>
+                </div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#a3e4b8"></span>Grace period (≤15 min)</div><div class="v"><b>17 cars</b><span>21.5%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#22d3ee"></span>Fully validated (vendor comp)</div><div class="v"><b>15 cars</b><span>19.0%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#8b5cf6"></span>Monthly pass holders</div><div class="v"><b>39 cars</b><span>49.4%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#2dd4bf"></span>Discount code (100% off)</div><div class="v"><b>5 cars</b><span>6.3%</span></div></div>
+                <div class="drill-row"><div class="k"><span class="d" style="background:#f59e0b"></span>Staff / whitelisted</div><div class="v"><b>3 cars</b><span>3.8%</span></div></div>
+                <div class="drill-actions">
+                  <button class="btn small" onclick="askAi('Is our 15-minute grace period too long at 302 Colorado? Model impact of shortening to 10 min.')">AI: tune grace</button>
+                  <button class="btn small" onclick="askAi('Which vendors are driving the most validations and are they profitable?')">AI: vendor ROI</button>
+                  <button class="btn small">Export 79 sessions</button>
+                </div>
+              </div>
+
+              <div class="drill-panel hide" id="drill-rev10">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
+                  <b>$10 hourly · 20 cars</b>
+                  <span class="close" onclick="openDrill('rev10')">×</span>
+                </div>
+                <div class="drill-row"><div class="k">Weekday day‑use</div><div class="v"><b>14</b><span>$140</span></div></div>
+                <div class="drill-row"><div class="k">Weekend evenings</div><div class="v"><b>6</b><span>$60</span></div></div>
+                <div class="drill-actions"><button class="btn small" onclick="askAi('Model raising the $10 tier to $12 on weekends')">AI: weekend lift</button></div>
+              </div>
+              <div class="drill-panel hide" id="drill-rev50">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#8b5cf6;display:inline-block"></span>
+                  <b>$50 monthly · 33 cars</b>
+                  <span class="close" onclick="openDrill('rev50')">×</span>
+                </div>
+                <div class="drill-row"><div class="k">Corporate accounts</div><div class="v"><b>21</b><span>$735</span></div></div>
+                <div class="drill-row"><div class="k">Individual subs</div><div class="v"><b>12</b><span>$415</span></div></div>
+                <div class="drill-actions"><button class="btn small" onclick="askAi('Which monthly spots are underused more than 50% of the month?')">AI: under‑used</button></div>
+              </div>
+              <div class="drill-panel hide" id="drill-rev80">
+                <div class="drill-head">
+                  <span class="dot" style="width:9px;height:9px;border-radius:50%;background:#ef4444;display:inline-block"></span>
+                  <b>$80 overnight / max · 2 cars</b>
+                  <span class="close" onclick="openDrill('rev80')">×</span>
+                </div>
+                <div class="drill-row"><div class="k">Overnight conversions</div><div class="v"><b>2</b><span>$30 (capped)</span></div></div>
+                <div class="drill-actions"><button class="btn small" onclick="askAi('Should the overnight max be raised from $80? Show 90-day impact.')">AI: overnight max</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="chart-card">
+              <h5>Hourly Occupancy Pattern</h5>
+              <div class="sub">Avg for this month · 12 AM → 12 AM</div>
+              <svg viewBox="0 0 300 160" width="100%" height="170">
+                <defs>
+                  <linearGradient id="fillG" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#22c55e" stop-opacity=".45"/>
+                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line class="grid-line" x1="0" y1="40" x2="300" y2="40"/>
+                <line class="grid-line" x1="0" y1="80" x2="300" y2="80"/>
+                <line class="grid-line" x1="0" y1="120" x2="300" y2="120"/>
+                <text class="axis-txt" x="4" y="18">40%</text>
+                <text class="axis-txt" x="4" y="80">20%</text>
+                <text class="axis-txt" x="4" y="140">0%</text>
+                <path d="M0,140 C30,138 50,130 75,110 C100,92 130,70 160,68 C190,66 210,80 240,100 C270,120 285,138 300,140 L300,160 L0,160 Z" fill="url(#fillG)"/>
+                <path d="M0,140 C30,138 50,130 75,110 C100,92 130,70 160,68 C190,66 210,80 240,100 C270,120 285,138 300,140" fill="none" stroke="#22c55e" stroke-width="2"/>
+                <text class="axis-txt" x="0" y="158">12AM</text>
+                <text class="axis-txt" x="75" y="158">6AM</text>
+                <text class="axis-txt" x="145" y="158">12PM</text>
+                <text class="axis-txt" x="220" y="158">6PM</text>
+                <text class="axis-txt" x="270" y="158">12AM</text>
+              </svg>
+            </div>
+            <div class="chart-card">
+              <h5>Session Duration</h5>
+              <div class="sub">Distribution of park times</div>
+              <div class="daybars">
+                <div class="bar c" style="height:18%"></div>
+                <div class="bar c" style="height:34%"></div>
+                <div class="bar c" style="height:58%"></div>
+                <div class="bar c" style="height:78%"></div>
+                <div class="bar" style="height:44%;background:#f59e0b"></div>
+                <div class="bar" style="height:22%;background:#ef4444"></div>
+              </div>
+              <div class="daybars-row">
+                <span>&lt;30m</span><span>30m‑1h</span><span>1‑2h</span><span>2‑4h</span><span>4‑8h</span><span>8h+</span>
+              </div>
+              <div class="center-kpis" style="grid-template-columns:1fr 1fr;margin-top:14px">
+                <div class="center-kpi"><div class="lbl">Avg Duration</div><div class="v">2.1 hrs</div></div>
+                <div class="center-kpi"><div class="lbl">Median</div><div class="v">1.5 hrs</div></div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h5>Key Benchmarks</h5>
+              <div class="sub">Operational averages for period</div>
+              <div class="bench">
+                <div class="brow"><span class="k">Avg $ per Car</span><span class="v">$8.47</span></div>
+                <div class="brow"><span class="k">Avg Rev / Transient Space</span><span class="v">$41.82</span></div>
+                <div class="brow"><span class="k">Avg Occupancy (Period)</span><span class="v">12.8%</span></div>
+                <div class="brow"><span class="k">Peak Occupancy (Period)</span><span class="v bad">34.2%</span></div>
+                <div class="brow"><span class="k">Space Turnover Rate</span><span class="v warn">1.85×</span></div>
+                <div class="brow"><span class="k">Citations / 100 Cars</span><span class="v">1.38</span></div>
+                <div class="brow"><span class="k">Customer Retention</span><span class="v good">61.4%</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ========== DURATION PANEL ========== -->
+        <div class="panel-body hide" id="panel-duration">
+          <div class="row-bar">
+            <div>
+              <span class="t">Session duration analytics</span>
+              <span style="color:var(--text);font-size:13px;font-weight:600;margin-left:8px">Last 30 days</span>
+            </div>
+            <div class="period">
+              <button>7d</button>
+              <button class="on">30d</button>
+              <button>90d</button>
+              <button>Custom</button>
+            </div>
+          </div>
+
+          <div class="kpis-4">
+            <div class="kpi"><div class="t">Avg Session</div><div class="v g">2.1 hrs</div><div class="d up">▲ 4% vs prior period</div></div>
+            <div class="kpi cyan"><div class="t">Median Session</div><div class="v">1.5 hrs</div><div class="d">50th percentile</div></div>
+            <div class="kpi teal"><div class="t">P95 Session</div><div class="v">6.2 hrs</div><div class="d">long‑tail</div></div>
+            <div class="kpi amber"><div class="t">&gt; 8h Sessions</div><div class="v">3</div><div class="d">flagged for review</div></div>
+          </div>
+
+          <div class="section-title">Duration distribution</div>
+          <div class="chart-card">
+            <h5>Park‑time distribution · 145 sessions</h5>
+            <div class="sub">Buckets by total duration</div>
+            <div class="daybars" style="height:220px">
+              <div class="bar c" style="height:28%"></div>
+              <div class="bar c" style="height:44%"></div>
+              <div class="bar c" style="height:68%"></div>
+              <div class="bar c" style="height:88%"></div>
+              <div class="bar" style="height:54%;background:#f59e0b"></div>
+              <div class="bar" style="height:22%;background:#ef4444"></div>
+            </div>
+            <div class="daybars-row"><span>&lt;30m</span><span>30m‑1h</span><span>1‑2h</span><span>2‑4h</span><span>4‑8h</span><span>8h+</span></div>
+          </div>
+
+          <div class="section-title">Duration by parker type</div>
+          <div class="grid-3">
+            <div class="chart-card"><h5>Monthly Parkers</h5><div class="sub">Avg 28.3 days active</div><div style="font-size:30px;font-weight:700;color:#b49cff;margin-top:10px">28.3d</div><div style="font-size:12px;color:var(--text-dim)">101 monthly · renewals up 9%</div></div>
+            <div class="chart-card"><h5>Transient Parkers</h5><div class="sub">Avg 2.1 hrs per visit</div><div style="font-size:30px;font-weight:700;color:#fbc67a;margin-top:10px">2.1h</div><div style="font-size:12px;color:var(--text-dim)">33 transient · median 1.5h</div></div>
+            <div class="chart-card"><h5>Validated Parkers</h5><div class="sub">Avg 1.4 hrs per visit</div><div style="font-size:30px;font-weight:700;color:#9eefff;margin-top:10px">1.4h</div><div style="font-size:12px;color:var(--text-dim)">11 validated · merchant‑linked</div></div>
+          </div>
+
+          <div class="agent-bar" style="margin-top:16px">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+            <div class="msg"><b>Tip: ask Agent Mode "flag any session over 8h for review and email me a summary".</b><small>It will set up the rule and schedule a daily digest.</small></div>
+            <div class="right"><button class="btn small primary">Create rule</button></div>
+          </div>
+        </div>
+
+        <!-- ========== PRICING PANEL ========== -->
+        <div class="panel-body hide" id="panel-pricing">
+          <div class="row-bar">
+            <div>
+              <span class="t">Pricing structure</span>
+              <span style="color:var(--text);font-size:13px;font-weight:600;margin-left:8px">Gated · effective immediately</span>
+              <span class="chip-ind" style="margin-left:8px">Live</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn small">Preview impact</button>
+              <button class="btn small">Duplicate to other location</button>
+              <button class="btn primary small">Save changes</button>
+            </div>
+          </div>
+
+          <div class="section-title">Grace &amp; minimums</div>
+          <div class="price-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="price-card">
+              <h5>Free grace period</h5>
+              <div class="price"><span class="cur">First</span>15<span class="cur" style="margin-left:2px">min</span></div>
+              <div class="meta">79 cars used grace this month</div>
+              <div class="price-edit">
+                <input type="number" value="15" step="1"/>
+                <select class="select" style="flex:0 0 auto"><option>minutes</option><option>hours</option></select>
+              </div>
+            </div>
+            <div class="price-card">
+              <h5>Minimum charge</h5>
+              <div class="price"><span class="cur">$</span>2.50</div>
+              <div class="meta">Applied after grace period ends</div>
+              <div class="price-edit">
+                <input type="number" value="2.50" step="0.25"/>
+                <button class="btn small">Update</button>
+              </div>
+            </div>
+            <div class="price-card" style="border-color:rgba(239,68,68,.35)">
+              <h5>Daily max (cap)</h5>
+              <div class="price" style="color:#ff9292"><span class="cur">$</span>10.00</div>
+              <div class="meta">Cumulative per entry, resets at cutover</div>
+              <div class="price-edit">
+                <input type="number" value="10.00" step="0.50"/>
+                <button class="btn small">Update</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Tiered rate table · transient parkers</div>
+          <div class="sub" style="color:var(--muted);font-size:12px;margin-top:-4px;margin-bottom:10px">Build compound rates like "$2.50 per 30 min for the first 2 hours, then $5 per 30 min to a $10 daily max." Tiers apply in order.</div>
+
+          <!-- Clean tabular rate table -->
+          <div class="rate-wrap">
+            <div class="rate-thead">
+              <div>Step</div>
+              <div>Duration</div>
+              <div>Rate</div>
+              <div>Per</div>
+              <div>Running total</div>
+              <div>Applies to</div>
+              <div></div>
+            </div>
+            <div class="rate-trow">
+              <div class="step">1</div>
+              <div class="dur">
+                <span style="color:var(--muted);font-size:11px;align-self:center">First</span>
+                <input type="number" value="2"/>
+                <select><option>hours</option><option>minutes</option></select>
+              </div>
+              <div class="rate-inp"><span class="cur">$</span><input type="number" value="2.50" step="0.25"/></div>
+              <div class="per"><input type="number" value="30"/><select style="background:#0e141b;border:1px solid var(--border);color:var(--text-dim);padding:6px;border-radius:6px;font-size:11.5px"><option>min</option><option>hr</option></select></div>
+              <div class="cum">$0 → $10.00<small>after 2 h</small></div>
+              <div class="appl"><select><option>Transient</option><option>Validated</option><option>All</option></select></div>
+              <button class="rm" title="Remove tier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+            <div class="rate-trow">
+              <div class="step">2</div>
+              <div class="dur">
+                <span style="color:var(--muted);font-size:11px;align-self:center">Next</span>
+                <input type="number" value="2"/>
+                <select><option>hours</option><option>until cap</option></select>
+              </div>
+              <div class="rate-inp"><span class="cur">$</span><input type="number" value="5.00" step="0.25"/></div>
+              <div class="per"><input type="number" value="30"/><select style="background:#0e141b;border:1px solid var(--border);color:var(--text-dim);padding:6px;border-radius:6px;font-size:11.5px"><option>min</option><option>hr</option></select></div>
+              <div class="cum" style="color:#7ee6a5">→ $10.00<small>daily max hit</small></div>
+              <div class="appl"><select><option>Transient</option></select></div>
+              <button class="rm" title="Remove tier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+            <div class="rate-trow">
+              <div class="step" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#1a0a05">3</div>
+              <div class="dur">
+                <span style="color:var(--muted);font-size:11px;align-self:center">Until</span>
+                <input type="time" value="21:00" style="width:auto"/>
+              </div>
+              <div class="rate-inp" style="color:var(--muted);font-size:11.5px;align-items:center">Flat cap <span class="cur">$</span><input type="number" value="10.00" step="0.25"/></div>
+              <div class="per" style="color:var(--muted)">—</div>
+              <div class="cum">$10.00<small>held at cap</small></div>
+              <div class="appl"><select><option>Transient</option><option>All</option></select></div>
+              <button class="rm" title="Remove tier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+            <div class="rate-trow">
+              <div class="step" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff">4</div>
+              <div class="dur">
+                <span style="color:var(--muted);font-size:11px;align-self:center">After</span>
+                <input type="time" value="21:00" style="width:auto"/>
+              </div>
+              <div class="rate-inp"><span class="cur">+$</span><input type="number" value="10.00" step="0.25"/></div>
+              <div class="per" style="color:var(--muted)">overnight flat</div>
+              <div class="cum" style="color:#b49cff">$20.00<small>rolls 05:00</small></div>
+              <div class="appl"><select><option>Overnight</option><option>Roll next day</option></select></div>
+              <button class="rm" title="Remove tier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+            <div class="rate-foot">
+              <button class="btn small icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add tier</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn small icon" onclick="askAi('Simulate a 3-hour stay on this rate table and show the total')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                  Simulate stay
+                </button>
+                <button class="btn small icon" onclick="askAi('Apply this rate table to the last 30 days of sessions and show the revenue delta vs current rates')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+                  Model 30‑day impact
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual rate ladder -->
+          <div class="rate-ladder">
+            <div class="rl-head">
+              <h5>Rate ladder · session cost over time</h5>
+              <span class="sub">Visualizes how a transient parker's bill grows over a 24h stay</span>
+              <div class="rl-legend">
+                <span><span class="swatch" style="background:#2dd4bf"></span>Step 1 ($2.50/30m)</span>
+                <span><span class="swatch" style="background:#f59e0b"></span>Step 2 ($5/30m)</span>
+                <span><span class="swatch" style="background:#ef4444"></span>Daily cap</span>
+                <span><span class="swatch" style="background:#8b5cf6"></span>Overnight (+$10)</span>
+              </div>
+            </div>
+            <svg viewBox="0 0 720 220" width="100%" height="220" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="ladderFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".28"/>
+                  <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <!-- grid -->
+              <g stroke="#1a2129" stroke-width="1">
+                <line x1="40" y1="30" x2="700" y2="30"/>
+                <line x1="40" y1="70" x2="700" y2="70"/>
+                <line x1="40" y1="110" x2="700" y2="110"/>
+                <line x1="40" y1="150" x2="700" y2="150"/>
+                <line x1="40" y1="190" x2="700" y2="190"/>
+              </g>
+              <!-- y-axis labels -->
+              <g fill="#6b7785" font-size="10" font-family="ui-monospace">
+                <text x="8" y="34">$25</text>
+                <text x="8" y="74">$20</text>
+                <text x="8" y="114">$15</text>
+                <text x="8" y="154">$10</text>
+                <text x="10" y="194">$0</text>
+              </g>
+              <!-- x-axis labels -->
+              <g fill="#6b7785" font-size="10">
+                <text x="40" y="210">0h</text>
+                <text x="180" y="210">2h</text>
+                <text x="325" y="210">4h</text>
+                <text x="470" y="210">9 PM</text>
+                <text x="620" y="210">5 AM</text>
+                <text x="690" y="210">24h</text>
+              </g>
+              <!-- axes -->
+              <line x1="40" y1="30" x2="40" y2="190" stroke="#2a3340" stroke-width="1"/>
+              <line x1="40" y1="190" x2="700" y2="190" stroke="#2a3340" stroke-width="1"/>
+              <!-- Step 1 line (0→2h, $0→$10) -->
+              <path d="M40 190 L180 150" stroke="#2dd4bf" stroke-width="3" fill="none"/>
+              <path d="M40 190 L180 150 L180 190 L40 190 Z" fill="url(#ladderFill)"/>
+              <!-- Step 2 line (2→4h, $10→$10 since hit cap) actually 2h already hits cap so keep flat -->
+              <path d="M180 150 L325 150" stroke="#f59e0b" stroke-width="3" fill="none" stroke-dasharray="0"/>
+              <!-- Step 3 cap flat line (4h→9pm) -->
+              <path d="M325 150 L470 150" stroke="#ef4444" stroke-width="3" fill="none"/>
+              <!-- Step 4 jump at 9pm (overnight +$10 => $20) -->
+              <line x1="470" y1="150" x2="470" y2="70" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4 3"/>
+              <path d="M470 70 L620 70" stroke="#8b5cf6" stroke-width="3" fill="none"/>
+              <!-- rolls 5am to next day = reset cycle, dashed -->
+              <path d="M620 70 L700 70" stroke="#8b5cf6" stroke-width="2" fill="none" stroke-dasharray="3 3" opacity=".6"/>
+
+              <!-- Step markers (dots) -->
+              <circle cx="40" cy="190" r="4" fill="#2dd4bf"/>
+              <circle cx="180" cy="150" r="4" fill="#2dd4bf"/>
+              <circle cx="325" cy="150" r="4" fill="#f59e0b"/>
+              <circle cx="470" cy="150" r="4" fill="#ef4444"/>
+              <circle cx="470" cy="70" r="5" fill="#8b5cf6" stroke="#0f141a" stroke-width="2"/>
+
+              <!-- Step pill labels -->
+              <g font-size="10" font-weight="700">
+                <rect x="55" y="170" width="14" height="14" rx="7" fill="#2dd4bf"/>
+                <text x="62" y="180" text-anchor="middle" fill="#07130b">1</text>
+                <rect x="232" y="128" width="14" height="14" rx="7" fill="#f59e0b"/>
+                <text x="239" y="138" text-anchor="middle" fill="#1a0a05">2</text>
+                <rect x="390" y="128" width="14" height="14" rx="7" fill="#ef4444"/>
+                <text x="397" y="138" text-anchor="middle" fill="#fff">3</text>
+                <rect x="530" y="48" width="14" height="14" rx="7" fill="#8b5cf6"/>
+                <text x="537" y="58" text-anchor="middle" fill="#fff">4</text>
+              </g>
+
+              <!-- Callouts -->
+              <g fill="#e6edf3" font-size="10.5" font-family="Inter">
+                <text x="80" y="165">$2.50 / 30m</text>
+                <text x="257" y="142">hits cap</text>
+                <text x="385" y="142" fill="#ff9292">$10 cap held</text>
+                <text x="487" y="62" fill="#b49cff">overnight +$10 → $20</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="tier-summary">
+            <div class="hd">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#2dd4bf"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+              Plain‑English summary
+            </div>
+            <div class="line">First <b>15 min</b> free. Then <b class="amt">$2.50</b> per 30 min for the first 2 hours.</div>
+            <div class="line">After that, <b class="amt">$5.00</b> per 30 min until the daily max of <b class="amt">$10.00</b>.</div>
+            <div class="line">At <b>9:00 PM</b>, the session converts to an overnight and adds a flat <b class="amt">$10.00</b> charge.</div>
+            <div class="line" style="color:var(--muted);font-size:11.5px;margin-top:6px">Example · 3h stay: $0 (grace) + $10 (hours 1–2, capped) + $10 (overnight if past 9 PM) = <b style="color:var(--text)">$20.00</b></div>
+          </div>
+
+          <div class="section-title">Overnight conversion</div>
+          <div class="overnight-card">
+            <div class="fld"><span class="lbl">Starts after</span>
+              <div class="inp-group"><input type="time" value="21:00"/></div>
+            </div>
+            <div class="fld"><span class="lbl">Ends at</span>
+              <div class="inp-group"><input type="time" value="05:00"/></div>
+            </div>
+            <div class="fld"><span class="lbl">Flat additional</span>
+              <div class="inp-group"><span class="prefix">$</span><input type="number" value="10.00" step="0.50"/></div>
+            </div>
+            <div class="fld"><span class="lbl">Rolls into next day at</span>
+              <div class="inp-group"><input type="time" value="05:00"/></div>
+            </div>
+          </div>
+
+          <div class="section-title">Plan types &amp; passes</div>
+          <div class="price-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="price-card" style="border-color:rgba(139,92,246,.35)">
+              <h5>Monthly pass</h5>
+              <div class="price" style="color:#b49cff"><span class="cur">$</span>50.00</div>
+              <div class="meta">33 active · $1,150 this month · unlimited entries</div>
+              <div class="price-edit"><input type="number" value="50.00" step="1"/><button class="btn small">Update</button></div>
+            </div>
+            <div class="price-card" style="border-color:rgba(34,211,238,.35)">
+              <h5>Weekly pass</h5>
+              <div class="price" style="color:#9eefff"><span class="cur">$</span>25.00</div>
+              <div class="meta">Commuter‑friendly, 7 days</div>
+              <div class="price-edit"><input type="number" value="25.00" step="1"/><button class="btn small">Update</button></div>
+            </div>
+            <div class="price-card" style="border-color:rgba(245,158,11,.35)">
+              <h5>Event / surge</h5>
+              <div class="price" style="color:#fbc67a"><span class="cur">$</span>20.00</div>
+              <div class="meta">Applied on scheduled event days (flat)</div>
+              <div class="price-edit"><input type="number" value="20.00" step="1"/><button class="btn small">Update</button></div>
+            </div>
+          </div>
+
+          <div class="agent-bar" style="margin-top:16px">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+            <div class="msg"><b>Agent prompt: "Model $2.50 per 30 min for 2h, then $5 per 30 min to $10 max, overnight +$10 after 9 PM. Show 30‑day revenue impact."</b><small>Agent Mode will replay the last 30 days under the new rate table and only apply on confirm.</small></div>
+            <div class="right"><button class="btn small primary" onclick="askAi('Model $2.50 per 30 min for 2h, then $5 per 30 min to $10 max, overnight +$10 after 9 PM. Show 30-day revenue impact.')">Try prompt</button></div>
+          </div>
+        </div>
+
+        <!-- ========== WHITELIST PANEL ========== -->
+        <div class="panel-body hide" id="panel-whitelist">
+          <div class="row-bar">
+            <div>
+              <span class="t">Whitelisted users</span>
+              <span style="color:var(--text);font-size:13px;font-weight:600;margin-left:8px">33 active · 2 pending · 1 expired</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn small icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Bulk import CSV
+              </button>
+              <button class="btn primary small icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add to whitelist
+              </button>
+            </div>
+          </div>
+
+          <div class="wl-toolbar">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input placeholder="Search by name, plate, or email…"/>
+            </div>
+            <select class="select"><option>All types</option><option>Monthly</option><option>Transient</option><option>Validated</option></select>
+            <select class="select"><option>All status</option><option>Active</option><option>Pending</option><option>Expired</option></select>
+            <select class="select"><option>Any day</option><option>Weekdays</option><option>Weekends</option></select>
+          </div>
+
+          <div class="card" style="border-radius:12px">
+            <div class="wl-thead">
+              <div>User</div>
+              <div>Plate / Vehicle</div>
+              <div>Days allowed</div>
+              <div>Time window</div>
+              <div>Type</div>
+              <div>Status</div>
+              <div style="text-align:right">Actions</div>
+            </div>
+
+            <div class="wl-row">
+              <div class="wl-name"><div class="mini-avatar g">AL</div><div class="who"><b>Ana López</b><small>ana@resolveparking.com</small></div></div>
+              <div><div style="font-family:ui-monospace;color:var(--text);font-weight:600">7ABC234</div><small style="color:var(--muted)">Honda Civic · Silver</small></div>
+              <div class="daychips"><span class="daychip on">M</span><span class="daychip on">T</span><span class="daychip on">W</span><span class="daychip on">T</span><span class="daychip on">F</span><span class="daychip">S</span><span class="daychip">S</span></div>
+              <div class="timeslot"><span class="w">6:00 AM → 8:00 PM</span><span class="m">Grace 15m · no overnight</span></div>
+              <div><span class="pill mo">Monthly</span></div>
+              <div><span class="pill ok">● Active</span></div>
+              <div class="actions-cell">
+                <button class="icon-btn" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                <button class="icon-btn" title="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+              </div>
+            </div>
+
+            <div class="wl-row">
+              <div class="wl-name"><div class="mini-avatar c">RM</div><div class="who"><b>Ravi Mehta</b><small>ravi.m@clientcorp.com</small></div></div>
+              <div><div style="font-family:ui-monospace;color:var(--text);font-weight:600">8BDE551</div><small style="color:var(--muted)">Tesla Model 3 · Blue</small></div>
+              <div class="daychips"><span class="daychip on">M</span><span class="daychip on">T</span><span class="daychip on">W</span><span class="daychip on">T</span><span class="daychip on">F</span><span class="daychip on">S</span><span class="daychip on">S</span></div>
+              <div class="timeslot"><span class="w">24 / 7</span><span class="m">Unrestricted access</span></div>
+              <div><span class="pill mo">Monthly</span></div>
+              <div><span class="pill ok">● Active</span></div>
+              <div class="actions-cell">
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+              </div>
+            </div>
+
+            <div class="wl-row">
+              <div class="wl-name"><div class="mini-avatar a">JK</div><div class="who"><b>Jordan Kim</b><small>jkim@vendor.io</small></div></div>
+              <div><div style="font-family:ui-monospace;color:var(--text);font-weight:600">2FGH901</div><small style="color:var(--muted)">Ford Transit · White</small></div>
+              <div class="daychips"><span class="daychip on">M</span><span class="daychip on">T</span><span class="daychip on">W</span><span class="daychip on">T</span><span class="daychip on">F</span><span class="daychip">S</span><span class="daychip">S</span></div>
+              <div class="timeslot"><span class="w">7:00 AM → 12:00 PM</span><span class="m">Vendor deliveries only</span></div>
+              <div><span class="pill tr">Transient</span></div>
+              <div><span class="pill ok">● Active</span></div>
+              <div class="actions-cell">
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+              </div>
+            </div>
+
+            <div class="wl-row">
+              <div class="wl-name"><div class="mini-avatar v">SP</div><div class="who"><b>Sam Patel</b><small>sam@merchantx.com</small></div></div>
+              <div><div style="font-family:ui-monospace;color:var(--text);font-weight:600">9XYZ102</div><small style="color:var(--muted)">Rivian R1S · Black</small></div>
+              <div class="daychips"><span class="daychip">M</span><span class="daychip">T</span><span class="daychip">W</span><span class="daychip">T</span><span class="daychip">F</span><span class="daychip on">S</span><span class="daychip on">S</span></div>
+              <div class="timeslot"><span class="w">9:00 AM → 11:00 PM</span><span class="m">Weekends only · 2h max</span></div>
+              <div><span class="pill va">Validated</span></div>
+              <div><span class="pill pend">● Pending</span></div>
+              <div class="actions-cell">
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+              </div>
+            </div>
+
+            <div class="wl-row">
+              <div class="wl-name"><div class="mini-avatar">TW</div><div class="who"><b>Taylor Wu</b><small>taylor@ex‑staff.com</small></div></div>
+              <div><div style="font-family:ui-monospace;color:var(--text);font-weight:600">3LMN004</div><small style="color:var(--muted)">Kia Soul · Red</small></div>
+              <div class="daychips"><span class="daychip">M</span><span class="daychip">T</span><span class="daychip">W</span><span class="daychip">T</span><span class="daychip">F</span><span class="daychip">S</span><span class="daychip">S</span></div>
+              <div class="timeslot"><span class="w">Expired Mar 12</span><span class="m">Former employee</span></div>
+              <div><span class="pill mo">Monthly</span></div>
+              <div><span class="pill exp">● Expired</span></div>
+              <div class="actions-cell">
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 18.36 5.64L23 10"/></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Blackouts &amp; restrictions</div>
+          <div class="sub" style="color:var(--muted);font-size:12px;margin-top:-4px;margin-bottom:8px">Whitelisted users are blocked during these windows even if their schedule allows access.</div>
+          <div class="blackouts">
+            <div class="bl">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <div class="txt"><b>Event — Santa Monica 10K</b><small>May 4, 2026 · 5:00 AM – 12:00 PM · All whitelists paused</small></div>
+              <div class="right"><button class="btn small">Edit</button><button class="btn small danger">Remove</button></div>
+            </div>
+            <div class="bl">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>
+              <div class="txt"><b>Weekly maintenance</b><small>Every Sunday · 3:00 AM – 5:00 AM · Monthly parkers blocked</small></div>
+              <div class="right"><button class="btn small">Edit</button><button class="btn small danger">Remove</button></div>
+            </div>
+            <div class="bl">
+              <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+              <div class="txt"><b>Peak window — Fri 5–7 PM</b><small>Transient rate forced · monthly still allowed · auto‑renews weekly</small></div>
+              <div class="right"><button class="btn small">Edit</button><button class="btn small danger">Remove</button></div>
+            </div>
+            <button class="btn small icon" style="margin-top:4px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add blackout window
+            </button>
+          </div>
+
+          <div class="agent-bar" style="margin-top:16px">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+            <div class="msg"><b>Agent prompt: "Whitelist the 12 people on this CSV, M–F 6 AM–8 PM, monthly type."</b><small>Agent Mode parses the file, de‑dupes plates, and queues additions for your approval.</small></div>
+            <div class="right"><button class="btn small primary">Upload CSV</button></div>
+          </div>
+        </div>
+
+        <!-- ========== VALIDATION PANEL ========== -->
+        <div class="panel-body hide" id="panel-validation">
+
+          <div class="row-bar">
+            <div>
+              <span class="t">Validation &amp; vendors</span>
+              <span style="color:var(--text);font-size:13px;font-weight:600;margin-left:8px">3 vendors · 4 validation rules · 7 discount codes</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn small icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg>
+                AI: build vendor flow
+              </button>
+              <button class="btn primary small icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add vendor
+              </button>
+            </div>
+          </div>
+
+          <!-- Vendor admin basic details -->
+          <div class="val-section">
+            <h5>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal-2)"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              Vendor admin · basic details
+            </h5>
+            <div class="sub">Operator account that can validate parking on behalf of a merchant at this location.</div>
+            <div class="form-grid">
+              <div class="fld"><span class="lbl">First name<span class="req">*</span></span><input value="Ethan"/></div>
+              <div class="fld"><span class="lbl">Last name<span class="req">*</span></span><input value="Walker"/></div>
+              <div class="fld"><span class="lbl">Phone number</span><input placeholder="(555) 000‑0000"/></div>
+              <div class="fld"><span class="lbl">Email<span class="req">*</span></span><input value="ethan.walker@resolveparking.com"/></div>
+            </div>
+          </div>
+
+          <!-- Vendor / venue settings -->
+          <div class="val-section">
+            <h5>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal-2)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4H10v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9z"/></svg>
+              Vendor settings
+            </h5>
+            <div class="sub">Brand and limits for this vendor at 302 Colorado Ave.</div>
+            <div class="form-grid">
+              <div class="fld"><span class="lbl">Vendor name<span class="req">*</span></span><input value="Blue Bottle Coffee"/></div>
+              <div class="fld"><span class="lbl">Vendor type</span>
+                <select>
+                  <option>Retail / Merchant</option>
+                  <option>Restaurant</option>
+                  <option>Office tenant</option>
+                  <option>Hotel</option>
+                  <option>Event host</option>
+                  <option>Medical</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="fld"><span class="lbl">Associated location</span>
+                <select><option>302 Colorado Ave (Gated)</option></select>
+              </div>
+              <div class="fld"><span class="lbl">Status</span>
+                <select><option>Active</option><option>Paused</option><option>Pending</option></select>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px dashed var(--border);border-radius:10px;background:#0e141b">
+              <div class="toggle on"></div>
+              <div>
+                <b style="color:var(--text);font-size:12.5px">Require credit / funding for validations</b>
+                <div style="color:var(--muted);font-size:11.5px">Vendor must pre‑fund or be billed monthly for validations it issues.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Credit limits (any custom window, not just daily/monthly) -->
+          <div class="val-section">
+            <h5>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal-2)"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Credit limits
+            </h5>
+            <div class="sub">Set any window — daily, weekly, monthly, per‑event, or custom — not just daily/monthly maximums.</div>
+
+            <div class="credit-bar">
+              <div class="credit-row">
+                <div class="fld"><span class="lbl">Limit type</span>
+                  <select><option>Max validations</option><option>Max $ amount</option><option>Max minutes issued</option></select>
+                </div>
+                <div class="fld"><span class="lbl">Amount</span>
+                  <div style="display:flex;gap:6px"><input type="number" value="1000" style="flex:1"/><select style="flex:0 0 110px"><option>validations</option><option>dollars</option><option>minutes</option></select></div>
+                </div>
+                <div class="fld"><span class="lbl">Window</span>
+                  <select><option>Per day</option><option>Per week</option><option selected>Per month</option><option>Per event</option><option>Rolling 7 days</option><option>Rolling 30 days</option><option>Custom…</option></select>
+                </div>
+                <div class="fld"><span class="lbl">Reset on</span>
+                  <select><option>Calendar month (1st)</option><option>Signup anniversary</option><option>Manual reset</option></select>
+                </div>
+              </div>
+            </div>
+            <div class="credit-bar" style="margin-top:8px">
+              <div class="credit-row">
+                <div class="fld"><span class="lbl">Custom cap</span>
+                  <select><option>Per 3 hours</option><option>Per shift (9a‑5p)</option><option>Weekends only</option><option>Event window</option></select>
+                </div>
+                <div class="fld"><span class="lbl">Amount</span>
+                  <div style="display:flex;gap:6px"><input type="number" value="50" style="flex:1"/><select style="flex:0 0 110px"><option>validations</option><option>dollars</option></select></div>
+                </div>
+                <div class="fld"><span class="lbl">When exceeded</span>
+                  <select><option>Block further validations</option><option>Notify vendor admin</option><option>Charge vendor overage</option></select>
+                </div>
+                <div class="fld"><span class="lbl">Notify at</span>
+                  <div style="display:flex;gap:6px"><input type="number" value="80"/><span class="prefix">%</span></div>
+                </div>
+              </div>
+            </div>
+            <button class="btn small icon" style="margin-top:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add credit rule
+            </button>
+          </div>
+
+          <!-- Validation type selector -->
+          <div class="val-section">
+            <h5>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal-2)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Validations
+              <span style="margin-left:auto;color:var(--muted);font-weight:500;font-size:11.5px">Choose one or more validation types</span>
+              <button class="btn small primary icon" style="margin-left:auto">+ Add validation card</button>
+            </h5>
+            <div class="sub">A validation is what the vendor can apply to a ticket. Pick types, then configure.</div>
+
+            <div class="val-type-cards">
+              <div class="val-type-card on">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                <h6>Time Based</h6>
+                <p>Free minutes or hours added to a session.</p>
+              </div>
+              <div class="val-type-card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg></div>
+                <h6>Amount Based</h6>
+                <p>Dollar amount taken off the total.</p>
+              </div>
+              <div class="val-type-card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+                <h6>Percentage Based</h6>
+                <p>% off the ticket total (e.g. 50% off).</p>
+              </div>
+              <div class="val-type-card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                <h6>Confirmation Only</h6>
+                <p>Vendor vouches — session stays normal rate.</p>
+              </div>
+            </div>
+
+            <!-- Existing validation rules -->
+            <div class="discount-row">
+              <div><span class="vtype time">● Time Based</span><div style="margin-top:4px;color:var(--muted);font-size:11px">"1 Hour Free"</div></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Free Minutes</div><input value="60" type="number"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Applies to</div><select><option>Any ticket</option><option>Gated only</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Allow multiple</div><select><option>No</option><option>Yes (stack)</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Roles</div><select><option>Validator</option><option>Manager</option></select></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+
+            <div class="discount-row">
+              <div><span class="vtype amt">● Amount Based</span><div style="margin-top:4px;color:var(--muted);font-size:11px">"$5 off"</div></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Credit amount</div><input value="$5.00"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Applies to</div><select><option>Transient</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Allow multiple</div><select><option>No</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Roles</div><select><option>Validator</option></select></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+
+            <div class="discount-row">
+              <div><span class="vtype pct">● Percentage Based</span><div style="margin-top:4px;color:var(--muted);font-size:11px">"50% off"</div></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Discount %</div><input value="50"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Max credit</div><input value="$20.00"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Allow multiple</div><select><option>No</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Roles</div><select><option>Validator, Manager</option></select></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+
+            <div class="discount-row">
+              <div><span class="vtype conf">● Confirmation Only</span><div style="margin-top:4px;color:var(--muted);font-size:11px">Audit‑only</div></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Log reason</div><input value="Customer visit"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Applies to</div><select><option>Any ticket</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Allow multiple</div><select><option>Yes</option></select></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Roles</div><select><option>Front desk</option></select></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Discount codes -->
+          <div class="val-section">
+            <h5>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--teal-2)"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              Discount codes
+              <span style="margin-left:auto;color:var(--muted);font-weight:500;font-size:11.5px">Attach codes to a validation rule for sharing to drivers</span>
+              <button class="btn small primary icon" style="margin-left:8px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New code
+              </button>
+            </h5>
+
+            <div class="code-row">
+              <div>
+                <span class="codevalue">BLUEBOTTLE1HR</span>
+                <small>Attached to · Time Based (60 min free)</small>
+              </div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Uses</div><span style="color:var(--text);font-weight:600">38 / 500</span></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Valid until</div><input type="date" value="2026-06-30"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Channel</div><select><option>In‑store QR</option><option>Email</option><option>App</option><option>Print receipt</option></select></div>
+              <div><span class="pill ok">● Active</span></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            </div>
+
+            <div class="code-row">
+              <div>
+                <span class="codevalue">MERCHX50</span>
+                <small>Attached to · Percentage Based (50% off)</small>
+              </div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Uses</div><span style="color:var(--text);font-weight:600">12 / 250</span></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Valid until</div><input type="date" value="2026-05-15"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Channel</div><select><option>In‑store QR</option></select></div>
+              <div><span class="pill ok">● Active</span></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            </div>
+
+            <div class="code-row">
+              <div>
+                <span class="codevalue">WELCOME100</span>
+                <small>Attached to · Amount Based (first visit, 100% off up to $10)</small>
+              </div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Uses</div><span style="color:var(--text);font-weight:600">6 / 100</span></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Valid until</div><input type="date" value="2026-12-31"/></div>
+              <div><div style="font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600">Channel</div><select><option>App onboarding</option></select></div>
+              <div><span class="pill pend">● Limited</span></div>
+              <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+            </div>
+          </div>
+
+          <div class="agent-bar">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+            <div class="msg"><b>Agent prompt: "Create a new vendor 'Modern Apizza' with 1‑hour free time validation, $500/month credit cap, and a discount code called APIZZA1HR."</b><small>Agent Mode will create the vendor, configure validation + credit limit, and generate the code — all scoped to this location.</small></div>
+            <div class="right"><button class="btn small primary" onclick="askAi(&quot;Create a new vendor 'Modern Apizza' with 1-hour free time validation, $500/month credit cap, and a discount code APIZZA1HR.&quot;)">Try prompt</button></div>
+          </div>
+        </div>
+
+        <!-- ========== ADVANCED PANEL ========== -->
+        <div class="panel-body hide" id="panel-advanced">
+          <div class="adv-grid">
+            <div class="adv-nav">
+              <button class="on">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+                Access &amp; Enforcement
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6"/></svg>
+                Devices &amp; LPR
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h4"/></svg>
+                Payment &amp; Billing
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 12h16v4H4z"/></svg>
+                Signage &amp; QR
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92V21a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3 5.18 2 2 0 0 1 5 3h4.09a2 2 0 0 1 2 1.72 13 13 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.91 11.09a16 16 0 0 0 6 6l1.45-1.45a2 2 0 0 1 2.11-.45 13 13 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                Notifications
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg>
+                Agent permissions
+              </button>
+              <button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+                Danger zone
+              </button>
+            </div>
+
+            <div class="adv-panel">
+              <h5>Access &amp; Enforcement</h5>
+              <div class="descr">Control how vehicles enter, exit, and get cited. Agent Mode changes here require approval.</div>
+
+              <div class="setting">
+                <div class="copy"><b>Grace period</b><small>Free minutes after arrival before a session bills.</small></div>
+                <select class="select"><option>5 min</option><option selected>15 min</option><option>30 min</option></select>
+              </div>
+              <div class="setting">
+                <div class="copy"><b>Max stay</b><small>Auto‑cite vehicles parked over this limit.</small></div>
+                <select class="select"><option>4 h</option><option>8 h</option><option selected>24 h</option><option>None</option></select>
+              </div>
+              <div class="setting">
+                <div class="copy"><b>Auto‑citation for unpaid exit</b><small>Issue $10 citation when a gated vehicle exits without payment.</small></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="setting">
+                <div class="copy"><b>Whitelist override on peak</b><small>Monthly parkers keep access during peak without surcharge.</small></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="setting">
+                <div class="copy"><b>Allow reservations overlap</b><small>Permit transient parking in reserved spaces when idle.</small></div>
+                <div class="toggle"></div>
+              </div>
+
+              <div class="agent-bar" style="margin-top:16px">
+                <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.39 4.84L20 8l-4 3.9.94 5.5L12 14.77 7.06 17.4 8 11.9 4 8l5.61-1.16L12 2z"/></svg></div>
+                <div class="msg"><b>Prompt Agent Mode: "Turn off auto‑citations after 10 PM on weekends."</b><small>It will stage the rule, show before/after, and wait for approval.</small></div>
+                <div class="right"><button class="btn small primary">Try prompt</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <footer style="text-align:center;color:var(--muted);font-size:11.5px;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)">
+        © 2026 Resolve Parking System · Location ID <span style="color:var(--text-dim);font-family:ui-monospace">LOC-302-CLRDO-SM</span>
+      </footer>
+
+    </section>
+  </main>
+</div>
+
+<script>
+  function setType(btn,type){
+    var seg = btn.parentElement;
+    seg.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+    btn.classList.add('on');
+    // auto-focus related sub-tab
+    if(type==='validation'){ var v=document.querySelector('.subtab[data-tab="validation"]'); if(v) setSub(v); }
+    if(type==='monthly'){ var p=document.querySelector('.subtab[data-tab="pricing"]'); if(p) setSub(p); }
+  }
+  function toggleMap(){
+    var card = document.querySelector('.map-card');
+    var lbl  = document.getElementById('mapBtnLbl');
+    if(!card) return;
+    card.classList.toggle('expanded');
+    if(lbl) lbl.textContent = card.classList.contains('expanded') ? 'Collapse map' : 'Expand map';
+  }
+  function openDrill(kind){
+    var panel = document.getElementById('drill-'+kind);
+    var others = document.querySelectorAll('.drill-panel');
+    others.forEach(function(el){ if(el!==panel) el.classList.add('hide'); });
+    if(panel) panel.classList.toggle('hide');
+  }
+  function askAi(label){
+    var box = document.querySelector('.ai-input input');
+    if(box){ box.value = label; box.focus(); }
+    var pop = document.getElementById('notifPop');
+    if(pop) pop.classList.remove('open');
+  }
+  function toggleNotif(){
+    var pop = document.getElementById('notifPop');
+    if(pop) pop.classList.toggle('open');
+  }
+  function markAllRead(event){
+    var c = document.getElementById('notifCount');
+    if(c){ c.style.display='none'; }
+    if(event && event.stopPropagation) event.stopPropagation();
+  }
+  document.addEventListener('click', function(e){
+    var pop = document.getElementById('notifPop');
+    var btn = document.querySelector('.notif-btn');
+    if(!pop || !btn) return;
+    if(pop.classList.contains('open') && !pop.contains(e.target) && !btn.contains(e.target)){
+      pop.classList.remove('open');
+    }
+  });
+  function setSub(btn){
+    document.querySelectorAll('.subtab').forEach(function(b){b.classList.remove('on');});
+    btn.classList.add('on');
+    var tab = btn.getAttribute('data-tab');
+    ['summary','duration','pricing','whitelist','validation','advanced'].forEach(function(t){
+      var el = document.getElementById('panel-'+t);
+      if(!el) return;
+      if(t===tab){ el.classList.remove('hide'); } else { el.classList.add('hide'); }
+    });
+  }
+</script>
+</body>
+</html>
