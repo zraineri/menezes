@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Resolve — Scan to Pay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Resolve brand */
+  --rs-mint:#00FB94; --rs-teal:#00D0C7; --rs-cyan:#00BFE0; --rs-blue:#00A5FA;
+  --rs-grad:linear-gradient(135deg,#00FB94 0%,#00D0C7 50%,#00A5FA 100%);
+  --rs-glow:rgba(0,191,224,0.40);
+  /* Header stays dark kiosk */
+  --hdr-bg:#081431; --hdr-bg2:#0C1B40;
+  --hdr-border:rgba(0,191,224,0.32);
+  /* Body is LIGHT */
+  --bg:#F2F6FF;
+  --bg-card:#FFFFFF;
+  --bg-muted:#EBF1FA;
+  --border:#B8CDE8;
+  --border-focus:#00BFE0;
+  --text:#0C1A2E;
+  --text-2:#4A6585;
+  --text-3:#8AA0BC;
+  --success:#00C47A;
+  --amber:#F59E0B;
+  --rose:#EF4444;
+  /* Session timer stays dark */
+  --timer-bg:#081431; --timer-bg2:#0C1B40;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 900px 500px at 85% -8%,rgba(0,191,224,0.12),transparent 60%),
+    radial-gradient(ellipse 700px 500px at -5% 110%,rgba(0,251,148,0.07),transparent 60%),
+    #050C1E;
+  display:flex;flex-direction:column;align-items:center;
+  font-family:'Outfit',system-ui,sans-serif;
+  padding:28px 16px 40px;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── URL bar ── */
+.url-bar{
+  width:100%;max-width:390px;margin-bottom:12px;
+  background:rgba(12,27,64,0.85);border:1px solid rgba(0,191,224,0.18);
+  border-radius:12px;padding:7px 12px;
+  display:flex;align-items:center;gap:9px;
+  font-size:11px;color:rgba(255,255,255,0.45);
+  backdrop-filter:blur(8px);
+}
+.url-lock svg{width:12px;height:12px;color:var(--rs-mint);}
+.url-text{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(255,255,255,0.5);flex:1;}
+.url-tag{font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--rs-teal);background:rgba(0,208,199,0.12);border:1px solid rgba(0,208,199,0.3);border-radius:4px;padding:2px 7px;}
+
+/* ── DEVICE ── */
+.device-outer{position:relative;width:390px;max-width:100%;height:820px;}
+.device{
+  width:390px;max-width:100%;height:820px;
+  background:linear-gradient(160deg,#1C1C1E,#0E0E10);
+  border-radius:52px;position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.1),0 0 0 2px rgba(0,0,0,0.7),0 60px 120px -20px rgba(0,0,0,0.9),0 0 80px -20px var(--rs-glow),inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+.device::before{content:'';position:absolute;left:-3px;top:120px;width:3px;height:36px;background:#2a2a2a;border-radius:3px 0 0 3px;box-shadow:0 50px 0 #2a2a2a,0 96px 0 #2a2a2a;}
+.device::after{content:'';position:absolute;right:-3px;top:160px;width:3px;height:64px;background:#2a2a2a;border-radius:0 3px 3px 0;}
+
+/* ── SCREEN WRAP ── */
+.screen-wrap{position:absolute;inset:12px;border-radius:42px;overflow:hidden;background:var(--bg);}
+.d-island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:100;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;gap:7px;}
+.di-cam{width:10px;height:10px;border-radius:50%;background:#1a1a1a;border:1.5px solid #0a0a0a;}
+.di-dot{width:6px;height:6px;border-radius:50%;background:#222;}
+.home-ind{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:135px;height:5px;background:rgba(0,0,0,0.2);border-radius:3px;z-index:3;}
+
+.phone-scroll{height:796px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.phone-scroll::-webkit-scrollbar{display:none;}
+.scroll-inner{padding-bottom:36px;}
+
+/* ── STATUS BAR (dark for the header zone) ── */
+.status-bar{
+  height:54px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 26px 10px;font-size:12px;font-weight:700;
+  background:var(--hdr-bg);color:#fff;
+  position:sticky;top:0;z-index:90;
+}
+.sb-time{font-size:15px;font-weight:800;}
+.sb-right{display:flex;align-items:center;gap:5px;color:#fff;}
+
+/* ── DARK KIOSK HEADER ── */
+.app-header{
+  background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);
+  padding:0 20px 22px;position:relative;overflow:hidden;
+}
+.app-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.app-header::after{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,191,224,0.16),transparent 70%);pointer-events:none;}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.rs-mark{display:flex;align-items:center;gap:9px;}
+.rs-logo{width:32px;height:32px;border-radius:9px;background:var(--rs-grad);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#022818;box-shadow:0 4px 14px -4px rgba(0,191,224,0.5);flex-shrink:0;}
+.rs-name{font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff;}
+.rs-sub{font-size:10px;color:rgba(255,255,255,0.45);font-weight:500;margin-top:1px;}
+.hdr-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(0,196,122,0.12);border:1px solid rgba(0,196,122,0.35);border-radius:999px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:var(--success);}
+.hdr-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse-dot 1.4s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+/* Lot info in header */
+.lot-row{display:flex;align-items:flex-start;gap:11px;position:relative;z-index:1;padding-top:18px;}
+.lot-pin{width:42px;height:42px;border-radius:11px;flex-shrink:0;background:rgba(0,191,224,0.1);border:1px solid var(--hdr-border);display:grid;place-items:center;color:var(--rs-cyan);}
+.lot-pin svg{width:21px;height:21px;}
+.lot-name{font-size:19px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.15;margin-bottom:3px;background:var(--rs-grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.lot-addr{font-size:12px;color:rgba(255,255,255,0.45);font-weight:500;line-height:1.4;}
+.lot-tag{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--rs-teal);background:rgba(0,208,199,0.1);border:1px solid rgba(0,208,199,0.25);border-radius:999px;padding:3px 9px;}
+
+/* Plate chip in header */
+.plate-chip-hdr{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,191,224,0.1);border:1.5px solid rgba(0,191,224,0.50);
+  border-radius:9px;padding:7px 12px;margin-top:14px;
+}
+.plate-chip-hdr .pc-ico{width:15px;height:15px;background:var(--rs-cyan);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l1.5-4.5A2 2 0 0 1 8.5 5h7a2 2 0 0 1 2 1.5L19 11M5 16h14M6 11h12a2 2 0 0 1 2 2v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l1.5-4.5A2 2 0 0 1 8.5 5h7a2 2 0 0 1 2 1.5L19 11M5 16h14M6 11h12a2 2 0 0 1 2 2v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center/contain no-repeat;}
+.plate-chip-hdr .pc-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;letter-spacing:.06em;}
+.plate-chip-hdr .pc-state{font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.04em;}
+.plate-chip-hdr .pc-badge{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--rs-mint);background:rgba(0,251,148,0.1);border-radius:4px;padding:2px 6px;}
+
+/* ── LIGHT BODY ── */
+.body{padding:18px 16px 0;display:flex;flex-direction:column;gap:14px;}
+.sec-lbl{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px;}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:17px;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+
+/* Phone pre-filled */
+.prefilled-field{background:var(--bg-muted);border:1.5px solid rgba(0,191,224,0.50);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.pf-ico{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;}
+.pf-ico svg{width:17px;height:17px;}
+.pf-content{flex:1;}
+.pf-label{font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;}
+.pf-value{font-size:14.5px;font-weight:700;color:var(--text);}
+.pf-note{font-size:10px;color:var(--rs-cyan);font-weight:600;margin-top:2px;}
+.pf-check{width:22px;height:22px;border-radius:50%;background:rgba(0,196,122,0.12);flex-shrink:0;display:grid;place-items:center;color:var(--success);}
+.pf-check svg{width:12px;height:12px;}
+
+/* ── VEHICLE TYPE — Broward style ── */
+.vtype-sublbl{font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:9px;letter-spacing:.03em;}
+.vtype-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.vtype-card{
+  background:var(--bg-card);border:2px solid var(--border);
+  border-radius:13px;padding:14px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;
+  transition:.15s;font-family:'Outfit',sans-serif;
+}
+.vtype-card:hover{border-color:var(--border-focus);background:var(--bg-muted);}
+.vtype-card .vt-ico{width:36px;height:36px;border-radius:10px;background:var(--bg-muted);color:var(--text-2);display:grid;place-items:center;transition:.15s;}
+.vtype-card .vt-ico svg{width:19px;height:19px;}
+.vtype-card .vt-name{font-size:13.5px;font-weight:800;color:var(--text);line-height:1;}
+.vtype-card .vt-desc{font-size:10.5px;color:var(--text-2);}
+.vtype-card.on{background:linear-gradient(160deg,rgba(0,191,224,0.08),rgba(0,251,148,0.04));border-color:var(--rs-cyan);box-shadow:0 0 0 3px rgba(0,191,224,0.10);}
+.vtype-card.on .vt-ico{background:rgba(0,191,224,0.12);color:var(--rs-cyan);}
+.vtype-card.on .vt-name{color:var(--rs-cyan);}
+
+/* ── PARKING TYPE ── */
+.ptype-sublbl{font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:9px;letter-spacing:.03em;}
+.ptype-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ptype-card{
+  background:var(--bg-card);border:2px solid var(--border);
+  border-radius:13px;padding:14px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  transition:.15s;font-family:'Outfit',sans-serif;
+}
+.ptype-card:hover{border-color:var(--border-focus);background:var(--bg-muted);}
+.ptype-card .pt-ico{width:36px;height:36px;border-radius:10px;background:var(--bg-muted);color:var(--text-2);display:grid;place-items:center;transition:.15s;}
+.ptype-card .pt-ico svg{width:19px;height:19px;}
+.ptype-card .pt-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.1;}
+.ptype-card .pt-desc{font-size:10px;color:var(--text-2);line-height:1.4;}
+.ptype-card.on{background:linear-gradient(160deg,rgba(0,191,224,0.08),rgba(0,251,148,0.04));border-color:var(--rs-cyan);box-shadow:0 0 0 3px rgba(0,191,224,0.10);}
+.ptype-card.on .pt-ico{background:rgba(0,191,224,0.12);color:var(--rs-cyan);}
+.ptype-card.on .pt-name{color:var(--rs-cyan);}
+
+/* ── WALLET ROW ── */
+.wallet-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.w-btn{height:54px;border-radius:14px;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:700;transition:transform .12s,opacity .15s;}
+.w-btn:active{transform:scale(0.97);}
+.w-btn:disabled{opacity:.4;cursor:not-allowed;}
+.w-apple{background:#000;color:#fff;}
+.w-google{background:#fff;color:#3c4043;border:1.5px solid #b8c4d4;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.g-logo{display:flex;gap:0;}
+.g-logo span{font-size:17px;font-weight:900;line-height:1;}
+.gb{color:#4285F4}.gr{color:#EA4335}.gy{color:#FBBC04}.gg{color:#34A853}
+.g-pay-txt{font-size:14px;font-weight:600;color:#3c4043;margin-left:4px;}
+
+/* ── OR DIVIDER ── */
+.or-div{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--text-3);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.or-div::before,.or-div::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── CARD FORM ── */
+.card-reveal{display:none;margin-bottom:10px;animation:fadeUp .22s ease;}
+.card-reveal.show{display:block;}
+.card-form-inner{background:var(--bg-muted);border:1.5px solid rgba(0,191,224,0.50);border-radius:13px;overflow:hidden;display:grid;grid-template-columns:1fr 90px 80px;}
+.cf-cell{padding:11px 13px;border-bottom:1px solid var(--border);}
+.cf-cell.full{grid-column:1/-1;border-bottom:1px solid var(--border);}
+.cf-cell.no-border{border-bottom:0;}
+.cf-cell label{display:block;font-size:9.5px;color:var(--text-3);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.cf-cell input{width:100%;background:transparent;border:0;outline:0;color:var(--text);font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:600;}
+.cf-cell input::placeholder{color:var(--text-3);font-weight:500;}
+
+/* ── MAIN PAY BUTTON ── */
+.pay-btn{width:100%;padding:17px;border-radius:14px;background:var(--rs-grad);color:#022818;border:0;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 12px 32px -10px rgba(0,191,224,0.55);transition:transform .12s,opacity .15s;}
+.pay-btn:hover{transform:translateY(-1px);}
+.pay-btn:active{transform:scale(0.98);}
+.pay-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.pay-btn svg{width:18px;height:18px;}
+.secure-note{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--text-3);margin-top:10px;font-weight:500;}
+.secure-note svg{width:11px;height:11px;color:var(--rs-teal);}
+
+/* ── PAY OVERLAY ── */
+.pay-overlay{position:absolute;inset:12px;background:rgba(5,10,28,0.96);backdrop-filter:blur(12px);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;border-radius:42px;}
+.pay-overlay.show{display:flex;}
+.pay-spinner{width:62px;height:62px;border-radius:50%;border:4px solid rgba(0,191,224,0.15);border-top-color:var(--rs-cyan);animation:spin .9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pay-overlay h2{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.pay-overlay p{font-size:13px;color:rgba(255,255,255,0.55);}
+.success-ring{width:76px;height:76px;border-radius:50%;background:var(--rs-grad);display:grid;place-items:center;color:#022818;transform:scale(0);animation:pop .5s cubic-bezier(.34,1.56,.64,1) forwards;box-shadow:0 12px 32px -8px rgba(0,191,224,0.6);}
+.success-ring svg{width:38px;height:38px;}
+@keyframes pop{from{transform:scale(0)}60%{transform:scale(1.1)}to{transform:scale(1)}}
+
+/* ── SESSION VIEW ── */
+.session-view{display:none;flex-direction:column;gap:13px;padding:0 0 28px;animation:fadeUp .3s ease;}
+.session-view.show{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Session header (dark) */
+.sess-hdr{background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);padding:14px 18px 18px;position:relative;overflow:hidden;}
+.sess-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.sess-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.sess-logo{width:28px;height:28px;border-radius:8px;background:var(--rs-grad);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#022818;flex-shrink:0;}
+.sess-loc-txt{font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;border-left:1px solid rgba(255,255,255,0.12);padding-left:10px;flex:1;}
+.sess-active-badge{display:inline-flex;align-items:center;gap:5px;background:var(--rs-grad);color:#022818;font-size:9.5px;font-weight:900;padding:5px 10px;border-radius:999px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 4px 12px -4px rgba(0,191,224,0.6);}
+.sess-active-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#022818;animation:pulse-dot 1.4s ease-in-out infinite;}
+
+/* Timer card (dark, inside session header) */
+.timer-card{background:linear-gradient(145deg,#0a1830 0%,#0e2455 50%,#0a1830 100%);border:1px solid rgba(0,191,224,0.22);border-radius:18px;padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 12px 30px -15px rgba(0,191,224,0.30);}
+.timer-card::before{content:'';position:absolute;top:-30%;right:-15%;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,191,224,0.18),transparent 70%);}
+.timer-card>*{position:relative;z-index:1;}
+.timer-badge{position:absolute;top:12px;right:12px;z-index:5;display:inline-flex;align-items:center;gap:5px;background:var(--rs-grad);color:#022818;font-size:9px;font-weight:900;padding:4px 9px;border-radius:999px;letter-spacing:.08em;text-transform:uppercase;}
+.timer-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:#022818;animation:pulse-dot 1.4s ease-in-out infinite;}
+
+.timer-ring-wrap{display:flex;justify-content:center;margin-bottom:8px;}
+.timer-ring{width:210px;height:210px;position:relative;}
+.timer-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.t-track{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:8;}
+.t-prog{fill:none;stroke:url(#rsGrad);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 0 7px rgba(0,191,224,0.55));}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;}
+.ring-head{font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:8px;}
+.countdown{display:flex;align-items:flex-start;justify-content:center;gap:3px;}
+.cnt-blk{display:flex;flex-direction:column;align-items:center;}
+.cnt-num{font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1;background:linear-gradient(180deg,#fff 0%,rgba(0,208,199,0.8) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.cnt-lbl{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:3px;}
+.cnt-colon{font-size:24px;font-weight:300;color:rgba(255,255,255,0.3);line-height:1;margin-top:2px;animation:blink 1s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.ring-price{font-size:10px;color:var(--rs-teal);font-weight:700;letter-spacing:.06em;margin-top:5px;display:flex;align-items:center;gap:4px;}
+.ring-price svg{width:10px;height:10px;}
+
+.expires-strip{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);}
+.exp-col{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.09em;text-transform:uppercase;font-weight:700;}
+.exp-col b{display:block;color:#fff;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none;margin-top:3px;}
+.exp-col small{display:block;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0;text-transform:none;font-weight:500;margin-top:1px;}
+.exp-col.right{text-align:right;}
+
+/* Light session body */
+.sess-body{padding:14px 16px 0;display:flex;flex-direction:column;gap:12px;}
+
+/* Drive-out card (light) */
+.drive-card{background:linear-gradient(135deg,rgba(0,191,224,0.07),rgba(0,251,148,0.04));border:1px solid rgba(0,191,224,0.25);border-radius:14px;padding:13px;display:flex;align-items:flex-start;gap:12px;}
+.drive-ico{width:38px;height:38px;border-radius:10px;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.drive-ico svg{width:20px;height:20px;}
+.drive-txt b{display:block;font-size:13.5px;font-weight:800;color:var(--rs-cyan);margin-bottom:3px;}
+.drive-txt small{font-size:11.5px;color:var(--text-2);line-height:1.5;}
+
+/* Plate session card (light) */
+.plate-sess-card{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+.plate-display{font-family:'JetBrains Mono',monospace;background:var(--rs-grad);color:#022818;font-size:17px;font-weight:800;padding:8px 14px;border-radius:7px;letter-spacing:.04em;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(0,191,224,0.4);}
+.plate-meta b{display:block;font-size:13px;color:var(--text);font-weight:700;}
+.plate-meta small{display:block;font-size:11px;color:var(--text-2);margin-top:1px;}
+.plate-tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.p-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(0,191,224,0.08);border:1px solid rgba(0,191,224,0.22);color:var(--rs-cyan);font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.04em;}
+
+/* Detail card (light) */
+.detail-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+.d-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.d-row:last-child{border-bottom:0;}
+.d-ico{width:32px;height:32px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.d-ico svg{width:15px;height:15px;}
+.d-content small{display:block;font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
+.d-content b{display:block;font-size:13.5px;color:var(--text);font-weight:600;margin-top:1px;}
+.d-right{font-size:12px;color:var(--text-2);font-weight:600;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+/* Rate chart btn (light) */
+.rate-chart-btn{width:100%;background:var(--bg-card);border:2px solid var(--border-focus);border-radius:13px;padding:13px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:'Outfit',sans-serif;color:var(--text);transition:.15s;text-align:left;box-shadow:0 0 0 3px rgba(0,191,224,0.10),0 1px 4px rgba(12,26,46,0.05);}
+.rate-chart-btn:hover{background:var(--bg-muted);border-color:var(--rs-teal);box-shadow:0 0 0 4px rgba(0,191,224,0.16);}
+.rc-ico{width:34px;height:34px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.rc-ico svg{width:17px;height:17px;}
+.rc-txt b{display:block;font-size:13px;font-weight:700;color:var(--text);}
+.rc-txt small{display:block;font-size:11px;color:var(--text-3);font-weight:500;}
+.rc-chev{color:var(--text-3);width:14px;height:14px;margin-left:auto;flex-shrink:0;}
+
+/* Vehicle toast */
+.v-toast{position:absolute;top:90px;left:50%;transform:translateX(-50%) scale(0);background:rgba(255,79,79,0.12);border:1px solid rgba(255,79,79,0.35);color:#ff6b6b;padding:10px 16px;border-radius:999px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;z-index:35;white-space:nowrap;pointer-events:none;backdrop-filter:blur(8px);}
+.v-toast.show{animation:toast-pop 2.4s ease-out forwards;}
+@keyframes toast-pop{0%{transform:translateX(-50%) scale(0)}15%{transform:translateX(-50%) scale(1.04)}25%{transform:translateX(-50%) scale(1)}80%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(.95);opacity:0}}
+.v-toast svg{width:14px;height:14px;}
+
+/* Rate sheet */
+.sheet-backdrop{position:absolute;inset:12px;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);display:none;z-index:50;border-radius:42px;}
+.sheet-backdrop.show{display:block;}
+.rate-sheet{position:absolute;left:12px;right:12px;bottom:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 42px 42px;padding:18px 18px 20px;z-index:51;display:none;flex-direction:column;gap:12px;max-height:75%;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);box-shadow:0 -8px 30px -8px rgba(12,26,46,0.15);}
+.rate-sheet.show{display:flex;transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 4px;}
+.rate-table{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.rate-trow{display:flex;justify-content:space-between;padding:10px 13px;font-size:12.5px;background:var(--bg-card);border-bottom:1px solid var(--border);}
+.rate-trow:last-child{border-bottom:0;}
+.rate-trow .rd{color:var(--text-2);font-weight:500;}
+.rate-trow .rp{color:var(--text);font-weight:700;font-family:'JetBrains Mono',monospace;}
+.rate-trow.rmax{background:linear-gradient(90deg,rgba(0,251,148,0.07),rgba(0,251,148,0.02));}
+.rate-trow.rmax .rd,.rate-trow.rmax .rp{color:#00A06A;font-weight:800;}
+.rate-trow.rcur{background:linear-gradient(90deg,rgba(0,191,224,0.10),rgba(0,191,224,0.02));}
+.rate-trow.rcur .rd,.rate-trow.rcur .rp{color:var(--rs-cyan);font-weight:800;}
+.now-lbl{display:inline-block;background:var(--rs-cyan);color:#022818;font-size:9px;font-weight:900;letter-spacing:.1em;padding:2px 6px;border-radius:4px;margin-right:7px;vertical-align:1px;}
+.sheet-close{width:100%;padding:11px;background:transparent;border:0;color:var(--text-2);font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;}
+.sheet-close:hover{color:var(--text);}
+</style>
+</head>
+<body>
+
+<!-- URL bar -->
+<div class="url-bar">
+  <div class="url-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+  <div class="url-text">park.resolveparking.com/s2p?lot=KKP&amp;plate=BCT2401</div>
+  <div class="url-tag">S2P</div>
+</div>
+
+<div class="device-outer">
+<div class="device">
+  <div class="d-island"><div class="di-cam"></div><div class="di-dot"></div></div>
+
+  <div class="screen-wrap">
+    <div class="phone-scroll" id="scroller">
+    <div class="scroll-inner">
+
+      <!-- Status bar (dark matches header) -->
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="1" opacity=".3"/><rect x="4.5" y="2" width="3" height="10" rx="1" opacity=".5"/><rect x="9" y=".5" width="3" height="11.5" rx="1" opacity=".7"/><rect x="13.5" y="0" width="3.5" height="12" rx="1"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.4C5.6 2.4 3.5 3.4 2 5L0 3C2.1 1.1 4.9 0 8 0s5.9 1.1 8 3l-2 2c-1.5-1.6-3.6-2.6-6-2.6z" opacity=".3"/><path d="M8 5.6c-1.4 0-2.7.5-3.6 1.4L2.5 5.1C3.9 3.8 5.9 3 8 3s4.1.8 5.5 2.1L11.6 7c-.9-.9-2.2-1.4-3.6-1.4z" opacity=".6"/><path d="M8 8.8c-.8 0-1.5.3-2 .8L4 7.8C5 6.7 6.4 6 8 6s3 .7 4 1.8l-2 1.8c-.5-.5-1.2-.8-2-.8z"/><circle cx="8" cy="11.5" r="1.5"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="currentColor" stroke-width="1" fill="none" opacity=".3"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z"/></svg>
+        </div>
+      </div>
+
+      <!-- ═══ PAY FORM ═══ -->
+      <div id="payForm">
+
+        <!-- Dark kiosk header -->
+        <div class="app-header">
+          <div class="lot-row">
+            <div class="lot-pin">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div>
+              <div class="lot-name">King Kalakaua Plaza</div>
+              <div class="lot-addr">Lot B · 2201 Kalakaua Ave, Honolulu, HI</div>
+
+            </div>
+          </div>
+
+          <div class="plate-chip-hdr" id="plateChipWrap">
+            <div class="pc-ico"></div>
+            <span class="pc-state" id="plateStateLabel">FL ·</span>
+            <input
+              id="plateInput"
+              class="pc-val"
+              value="BCT-2401"
+              maxlength="8"
+              style="background:transparent;border:none;outline:none;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;letter-spacing:.06em;width:80px;text-transform:uppercase;"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');syncPlate();"
+            />
+            <span class="pc-badge">EDITABLE</span>
+            <button onclick="document.getElementById('plateInput').focus()" title="Edit plate"
+              style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.5);padding:0;display:flex;align-items:center;margin-left:2px;transition:.15s;"
+              onmouseover="this.style.color='var(--rs-cyan)'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Light body -->
+        <div class="body">
+
+          <!-- Phone pre-filled -->
+          <div class="card">
+            <div class="sec-lbl">Your Details</div>
+            <div class="prefilled-field">
+              <div class="pf-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.86 13 19.79 19.79 0 0 1 1.82 4.16 2 2 0 0 1 3.8 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91A16 16 0 0 0 13 14.09l.91-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.16z"/></svg>
+              </div>
+              <div class="pf-content">
+                <div class="pf-label">Mobile Number</div>
+                <div class="pf-value">(808) 555-2401</div>
+                <div class="pf-note">✓ Verified from your SMS link</div>
+              </div>
+              <div class="pf-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vehicle type -->
+          <div class="card">
+            <div class="sec-lbl">Vehicle Type</div>
+            <div class="vtype-sublbl">Select one to continue</div>
+            <div class="vtype-row">
+              <button type="button" class="vtype-card" data-v="personal" onclick="selectVtype(this)">
+                <div class="vt-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+                </div>
+                <div class="vt-name">Personal</div>
+                <div class="vt-desc">My own vehicle</div>
+              </button>
+              <button type="button" class="vtype-card" data-v="temporary" onclick="selectVtype(this)">
+                <div class="vt-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M21 3l-3 3M3 3l3 3"/></svg>
+                </div>
+                <div class="vt-name">Temporary</div>
+                <div class="vt-desc">Rental or borrowed</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Parking Type -->
+          <div class="card">
+            <div class="sec-lbl">Parking Type</div>
+            <div class="ptype-sublbl">Choose how you'd like to park</div>
+            <div class="ptype-row">
+              <button type="button" class="ptype-card on" data-p="standard" onclick="selectPtype(this)">
+                <div class="pt-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M9 2h6"/></svg>
+                </div>
+                <div class="pt-name">Standard Parking</div>
+                <div class="pt-desc">Pay as you go</div>
+              </button>
+              <button type="button" class="ptype-card" data-p="24hr" onclick="selectPtype(this)">
+                <div class="pt-ico">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                </div>
+                <div class="pt-name">24 Hour Parking</div>
+                <div class="pt-desc">In/out access included</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Rate chart button -->
+          <button onclick="openRate()" style="width:100%;background:var(--bg-card);border:2px solid rgba(0,191,224,0.55);border-radius:13px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:'Outfit',sans-serif;color:var(--text);text-align:left;transition:.15s;box-shadow:0 0 0 3px rgba(0,191,224,0.08);" onmouseover="this.style.borderColor='var(--rs-cyan)'" onmouseout="this.style.borderColor='rgba(0,191,224,0.35)'">
+            <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;background:rgba(0,191,224,0.10);color:var(--rs-cyan);display:grid;place-items:center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);">View Rate Chart</div>
+              <div style="font-size:11px;color:var(--text-3);font-weight:500;margin-top:1px;" id="rateChartSub">$8.00/hr · $80.00 daily max</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);flex-shrink:0;"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+
+          <!-- Payment -->
+          <div class="card">
+            <div class="sec-lbl">Payment Method</div>
+            <div class="wallet-row">
+              <button class="w-btn w-apple" onclick="startPay('Apple Pay')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Pay
+              </button>
+              <button class="w-btn w-google" onclick="startPay('Google Pay')">
+                <div class="g-logo"><span class="gb">G</span><span class="gr">o</span><span class="gy">o</span><span class="gb">g</span><span class="gg">l</span><span class="gr">e</span></div>
+                <span class="g-pay-txt">Pay</span>
+              </button>
+            </div>
+
+            <div class="or-div">or pay with card</div>
+
+            <div class="card-reveal" id="cardReveal">
+              <div class="card-form-inner">
+                <div class="cf-cell full"><label>Card Number</label><input id="cardNum" placeholder="1234 1234 1234 1234" inputmode="numeric" maxlength="19" autocomplete="cc-number"/></div>
+                <div class="cf-cell"><label>Expiry</label><input id="cardExp" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp"/></div>
+                <div class="cf-cell"><label>CVC</label><input placeholder="•••" inputmode="numeric" maxlength="4" autocomplete="cc-csc"/></div>
+                <div class="cf-cell no-border"><label>ZIP</label><input placeholder="96815" inputmode="numeric" maxlength="5" autocomplete="postal-code"/></div>
+              </div>
+            </div>
+
+            <button class="pay-btn" id="payBtn" onclick="handlePayBtn()" style="margin-top:10px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+              <span id="payBtnTxt">Add payment method</span>
+            </button>
+
+            <div class="secure-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              256-bit encrypted · Powered by Resolve
+            </div>
+          </div>
+
+        </div><!-- /body -->
+      </div><!-- /payForm -->
+
+      <!-- ═══ SESSION VIEW ═══ -->
+      <div id="sessionView" class="session-view">
+
+        <!-- Dark session header with timer -->
+        <div class="sess-hdr">
+          <div class="sess-brand-row">
+            <div class="sess-logo">R</div>
+            <div class="sess-loc-txt">King Kalakaua Plaza · Lot B</div>
+          </div>
+
+          <div class="timer-card">
+            <div class="timer-badge">Active</div>
+            <div class="timer-ring-wrap">
+              <div class="timer-ring">
+                <svg viewBox="0 0 210 210">
+                  <defs>
+                    <linearGradient id="rsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#00FB94"/>
+                      <stop offset="50%" stop-color="#00D0C7"/>
+                      <stop offset="100%" stop-color="#00A5FA"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="t-track" cx="105" cy="105" r="93"/>
+                  <circle class="t-prog" id="tProg" cx="105" cy="105" r="93" stroke-dasharray="584.34" stroke-dashoffset="0"/>
+                </svg>
+                <div class="ring-center">
+                  <div class="ring-head">Time Parked</div>
+                  <div class="countdown">
+                    <div class="cnt-blk"><div class="cnt-num" id="tH">00</div><div class="cnt-lbl">hrs</div></div>
+                    <div class="cnt-colon">:</div>
+                    <div class="cnt-blk"><div class="cnt-num" id="tM">00</div><div class="cnt-lbl">min</div></div>
+                    <div class="cnt-colon">:</div>
+                    <div class="cnt-blk"><div class="cnt-num" id="tS">00</div><div class="cnt-lbl">sec</div></div>
+                  </div>
+                  <div class="ring-price" id="ringPrice">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>
+                    <span id="ringPriceTxt">FREE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="expires-strip">
+              <div class="exp-col">Started at<b id="sessStartTime">—</b><small id="sessStartDate">—</small></div>
+              <div class="exp-col right" id="sessRateCol">Rate<b id="sessRateAmt">$8.00 / hr</b><small id="sessRateCap">$80.00 daily max</small></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Light session body -->
+        <div class="sess-body">
+
+          <div class="drive-card">
+            <div class="drive-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg></div>
+            <div class="drive-txt">
+              <b>Just drive out to pay</b>
+              <small>Plate-recognition cameras at the exit close your session automatically. No need to return to your phone.</small>
+            </div>
+          </div>
+
+          <div class="plate-sess-card">
+            <div class="plate-display" id="sessPlate">BCT-2401</div>
+            <div class="plate-meta">
+              <b>Florida</b>
+              <small>1 active session</small>
+              <div class="plate-tags">
+                <div class="p-tag" id="sessVtypeTag">Personal</div>
+                <div class="p-tag">Lot B</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <div class="d-content"><small>Entry Time</small><b id="dEntryTime">—</b></div>
+              <div class="d-right" id="dEntryDate">—</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg></div>
+              <div class="d-content"><small>Payment</small><b id="dPayMethod">—</b></div>
+              <div class="d-right" style="color:var(--success);font-family:'Outfit',sans-serif;font-weight:700;">✓ Auth</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              <div class="d-content"><small>Running Total</small><b id="dTotal">$0.00</b></div>
+              <div class="d-right" style="font-size:11px;color:var(--text-3);font-family:'Outfit',sans-serif;">max $30.00</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              <div class="d-content"><small>Session Status</small><b>Active · Gate opens on exit</b></div>
+              <div class="d-right" style="color:var(--success);font-family:'Outfit',sans-serif;font-size:16px;">●</div>
+            </div>
+          </div>
+
+          <button class="rate-chart-btn" onclick="openRate()">
+            <div class="rc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></div>
+            <div class="rc-txt"><b>View complete rate chart</b><small id="rateChartSub">$8.00/hr · $80.00 daily max</small></div>
+            <svg class="rc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+
+          <div class="secure-note" style="margin-top:2px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Resolve · support.resolveparking.com
+          </div>
+        </div>
+      </div>
+
+    </div></div><!-- /scroll-inner /phone-scroll -->
+
+    <div class="home-ind"></div>
+
+    <!-- Pay overlay -->
+    <div class="pay-overlay" id="payOverlay">
+      <div id="overlayContent"><div class="pay-spinner"></div></div>
+      <h2 id="overlayTitle">Processing payment</h2>
+      <p id="overlaySub">Securely contacting your bank…</p>
+    </div>
+
+    <!-- Vehicle toast -->
+    <div class="v-toast" id="vToast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Please select vehicle type first
+    </div>
+
+    <!-- Rate sheet -->
+    <div class="sheet-backdrop" id="rateBackdrop" onclick="closeRate()"></div>
+    <div class="rate-sheet" id="rateSheet">
+      <div class="sheet-handle"></div>
+      <div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;">Rate Chart</div>
+      <div style="font-size:12px;color:var(--text-2);" id="rateSheetSub">King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$8.00 per hour</b>, capped at <b style="color:var(--text)">$80.00 / day</b></div>
+      <div class="rate-table" id="rateTable"></div>
+      <div style="font-size:11px;color:var(--text-3);line-height:1.6;">Validation codes from participating merchants accepted.<br>Questions? (808) 555-0100</div>
+      <button class="sheet-close" onclick="closeRate()">Close</button>
+    </div>
+
+  </div><!-- /screen-wrap -->
+</div><!-- /device -->
+</div><!-- /device-outer -->
+
+<script>
+// Rate configs
+const RATES = {
+  standard: { perHrMs: 60*60*1000, perHr: 8.00, max: 80.00, capMs: 10*60*60*1000, flat: false },
+  '24hr':   { flat: true, flatAmt: 75.00 }
+};
+let currentPtype = 'standard';
+
+function syncPlate(){
+  const val = (document.getElementById('plateInput')?.value || 'BCT-2401').trim();
+  const sp = document.getElementById('sessPlate');
+  if(sp) sp.textContent = val || 'BCT-2401';
+}
+
+function selectVtype(el){
+  document.querySelectorAll('.vtype-card').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+}
+function selectPtype(el){
+  document.querySelectorAll('.ptype-card').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  currentPtype = el.dataset.p;
+  updateRateUI();
+}
+function updateRateUI(){
+  const is24 = currentPtype === '24hr';
+  // Rate info card in form
+  // Session rate col
+  const rateAmt = document.getElementById('sessRateAmt');
+  const rateCap = document.getElementById('sessRateCap');
+  if(rateAmt) rateAmt.textContent = is24 ? '$75.00 flat' : '$8.00 / hr';
+  if(rateCap) rateCap.textContent = is24 ? 'Unlimited in/out' : '$80.00 daily max';
+  // Rate chart sheet sub
+  const rcSub = document.getElementById('rateChartSub');
+  if(rcSub) rcSub.textContent = is24 ? '$75.00 flat · 24hr access' : '$8.00/hr · $80.00 daily max';
+  const rsSub = document.getElementById('rateSheetSub');
+  if(rsSub) rsSub.innerHTML = is24
+    ? 'King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$75.00 flat</b> for a full 24-hour period'
+    : 'King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$8.00 per hour</b>, capped at <b style="color:var(--text)">$80.00 / day</b>';
+}
+
+function showVToast(){
+  const t=document.getElementById('vToast');
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+}
+
+let cardRevealed=false;
+document.getElementById('cardNum')?.addEventListener('input',e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,16);
+  e.target.value=v.replace(/(\d{4})(?=\d)/g,'$1 ');
+});
+document.getElementById('cardExp')?.addEventListener('input',e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,4);
+  if(v.length>=3) v=v.slice(0,2)+' / '+v.slice(2);
+  e.target.value=v;
+});
+
+function handlePayBtn(){
+  if(!document.querySelector('.vtype-card.on')){showVToast();return;}
+  if(!cardRevealed){
+    document.getElementById('cardReveal').classList.add('show');
+    document.getElementById('payBtnTxt').textContent='Confirm payment';
+    cardRevealed=true;
+    document.getElementById('cardReveal').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  startPay('Card');
+}
+
+let sessionStart=null, sessionActive=false, ticker=null, payMethod='';
+
+function startPay(method){
+  if(!document.querySelector('.vtype-card.on')){showVToast();return;}
+  payMethod=method;
+  const overlay=document.getElementById('payOverlay');
+  document.getElementById('overlayTitle').textContent=method==='Card'?'Processing payment':`Authorizing ${method}`;
+  document.getElementById('overlaySub').textContent='Securely contacting your bank…';
+  overlay.classList.add('show');
+  setTimeout(()=>{
+    document.getElementById('overlayContent').innerHTML='<div class="success-ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+    document.getElementById('overlayTitle').textContent='Payment confirmed';
+    document.getElementById('overlaySub').textContent='Starting your parking session…';
+  },1400);
+  setTimeout(()=>{overlay.classList.remove('show');launchSession();},2500);
+}
+
+function pad(n){return String(n).padStart(2,'0');}
+function fmtClock(d){let h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${pad(m)} ${ap}`;}
+function fmtDate(d){const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `${mo[d.getMonth()]} ${d.getDate()}`;}
+function calcAccrued(ms){
+  if(currentPtype==='24hr') return 75.00;
+  const R=RATES.standard;
+  if(ms<=0) return 0;
+  const hrs=ms/R.perHrMs;
+  return Math.min(hrs*R.perHr, R.max);
+}
+
+function launchSession(){
+  document.getElementById('payForm').style.display='none';
+  const sv=document.getElementById('sessionView');
+  sv.classList.add('show');
+  document.getElementById('scroller').scrollTo({top:0,behavior:'smooth'});
+
+  const now=new Date();
+  sessionStart=new Date(now.getTime()-(12*60+10)*1000);
+  sessionActive=true;
+
+  document.getElementById('sessStartTime').textContent=fmtClock(sessionStart);
+  document.getElementById('sessStartDate').textContent=fmtDate(sessionStart);
+  document.getElementById('dEntryTime').textContent=fmtClock(sessionStart);
+  document.getElementById('dEntryDate').textContent=fmtDate(sessionStart);
+  document.getElementById('dPayMethod').textContent=payMethod;
+
+  // Sync plate from editable input
+  syncPlate();
+  const vtCard=document.querySelector('.vtype-card.on');
+  const vtype=vtCard?vtCard.dataset.v:'personal';
+  const vtag=document.getElementById('sessVtypeTag');
+  if(vtag) vtag.textContent=vtype.charAt(0).toUpperCase()+vtype.slice(1);
+
+  tick(); if(ticker) clearInterval(ticker);
+  ticker=setInterval(tick,1000);
+}
+
+const RING_DASH=584.34;
+function getRingFrac(elapsed){
+  if(currentPtype==='24hr') return Math.min(elapsed/(24*60*60*1000),1);
+  return Math.min(elapsed/RATES.standard.capMs,1);
+}
+function tick(){
+  if(!sessionStart||!sessionActive) return;
+  const elapsed=new Date()-sessionStart;
+  const sec=Math.floor(elapsed/1000);
+  document.getElementById('tH').textContent=pad(Math.floor(sec/3600));
+  document.getElementById('tM').textContent=pad(Math.floor((sec%3600)/60));
+  document.getElementById('tS').textContent=pad(sec%60);
+  const price=calcAccrued(elapsed);
+  const is24hr=currentPtype==='24hr';
+  const priceStr=is24hr?'$75.00 flat':price===0?'FREE':'$'+price.toFixed(2)+' so far';
+  document.getElementById('ringPriceTxt').textContent=priceStr;
+  document.getElementById('ringPrice').style.color=price===0?'var(--success)':'var(--rs-teal)';
+  document.getElementById('dTotal').textContent='$'+price.toFixed(2);
+  const frac=getRingFrac(elapsed);
+  const prog=document.getElementById('tProg');
+  if(prog) prog.style.strokeDashoffset=String(RING_DASH*(1-frac));
+}
+
+function buildRateTable(elapsedMs){
+  if(currentPtype==='24hr'){
+    return `
+      <div class="rate-trow"><span class="rd">Flat day rate</span><span class="rp">$75.00</span></div>
+      <div class="rate-trow"><span class="rd">In/out access</span><span class="rp" style="color:var(--success)">Included</span></div>
+      <div class="rate-trow rmax"><span class="rd">Valid for</span><span class="rp">24 hours</span></div>`;
+  }
+  // Standard: $8/hr, max $80 (10hrs)
+  const rows=[];
+  for(let i=1;i<=10;i++) rows.push({hrs:i,price:Math.min(i*8,80)});
+  rows.push({cap:true});
+  const curHr=elapsedMs?Math.ceil(elapsedMs/(60*60*1000)):null;
+  return rows.map(r=>{
+    if(r.cap) return `<div class="rate-trow rmax"><span class="rd">After 10 hrs · daily max</span><span class="rp">$80.00</span></div>`;
+    const isCur=curHr&&r.hrs===curHr;
+    const dur=r.hrs===1?'1 hour':`${r.hrs} hours`;
+    return `<div class="rate-trow ${isCur?'rcur':''}"><span class="rd">${isCur?'<span class="now-lbl">NOW</span>':''}${dur}</span><span class="rp">$${r.price.toFixed(2)}</span></div>`;
+  }).join('');
+}
+
+function openRate(){
+  document.getElementById('rateTable').innerHTML=buildRateTable(sessionStart?new Date()-sessionStart:null);
+  document.getElementById('rateBackdrop').classList.add('show');
+  document.getElementById('rateSheet').classList.add('show');
+}
+function closeRate(){
+  document.getElementById('rateBackdrop').classList.remove('show');
+  document.getElementById('rateSheet').classList.remove('show');
+}
+document.getElementById('rateTable').innerHTML=buildRateTable(null);
+</script>
+</body>
+</html>
