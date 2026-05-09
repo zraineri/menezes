@@ -1,0 +1,1648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Resolve — Scan to Pay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+:root{
+  --rs-mint:#00FB94; --rs-teal:#00D0C7; --rs-cyan:#00BFE0; --rs-blue:#00A5FA;
+  --rs-grad:linear-gradient(135deg,#00FB94 0%,#00D0C7 50%,#00A5FA 100%);
+  --rs-glow:rgba(0,191,224,0.40);
+  --hdr-bg:#081431; --hdr-bg2:#0C1B40;
+  --hdr-border:rgba(0,191,224,0.32);
+  --bg:#F2F6FF;
+  --bg-card:#FFFFFF;
+  --bg-muted:#EBF1FA;
+  --border:#B8CDE8;
+  --border-focus:#00BFE0;
+  --text:#0C1A2E;
+  --text-2:#4A6585;
+  --text-3:#8AA0BC;
+  --success:#00C47A;
+  --amber:#F59E0B;
+  --rose:#EF4444;
+  --timer-bg:#081431; --timer-bg2:#0C1B40;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 900px 500px at 85% -8%,rgba(0,191,224,0.12),transparent 60%),
+    radial-gradient(ellipse 700px 500px at -5% 110%,rgba(0,251,148,0.07),transparent 60%),
+    #050C1E;
+  display:flex;flex-direction:column;align-items:center;
+  font-family:'Outfit',system-ui,sans-serif;
+  padding:28px 16px 40px;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── URL bar ── */
+.url-bar{
+  width:100%;max-width:390px;margin-bottom:12px;
+  background:rgba(12,27,64,0.85);border:1px solid rgba(0,191,224,0.18);
+  border-radius:12px;padding:7px 12px;
+  display:flex;align-items:center;gap:9px;
+  font-size:11px;color:rgba(255,255,255,0.45);
+  backdrop-filter:blur(8px);
+}
+.url-lock svg{width:12px;height:12px;color:var(--rs-mint);}
+.url-text{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(255,255,255,0.5);flex:1;}
+.url-tag{font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--rs-teal);background:rgba(0,208,199,0.12);border:1px solid rgba(0,208,199,0.3);border-radius:4px;padding:2px 7px;}
+
+/* ── DEVICE ── */
+.device-outer{position:relative;width:390px;max-width:100%;height:820px;}
+.device{
+  width:390px;max-width:100%;height:820px;
+  background:linear-gradient(160deg,#1C1C1E,#0E0E10);
+  border-radius:52px;position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.1),0 0 0 2px rgba(0,0,0,0.7),0 60px 120px -20px rgba(0,0,0,0.9),0 0 80px -20px var(--rs-glow),inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+.device::before{content:'';position:absolute;left:-3px;top:120px;width:3px;height:36px;background:#2a2a2a;border-radius:3px 0 0 3px;box-shadow:0 50px 0 #2a2a2a,0 96px 0 #2a2a2a;}
+.device::after{content:'';position:absolute;right:-3px;top:160px;width:3px;height:64px;background:#2a2a2a;border-radius:0 3px 3px 0;}
+
+/* ── SCREEN WRAP ── */
+.screen-wrap{position:absolute;inset:12px;border-radius:42px;overflow:hidden;background:var(--bg);}
+.d-island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:100;display:flex;align-items:center;justify-content:flex-end;padding-right:14px;gap:7px;}
+.di-cam{width:10px;height:10px;border-radius:50%;background:#1a1a1a;border:1.5px solid #0a0a0a;}
+.di-dot{width:6px;height:6px;border-radius:50%;background:#222;}
+.home-ind{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:135px;height:5px;background:rgba(0,0,0,0.2);border-radius:3px;z-index:3;}
+
+.phone-scroll{height:796px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.phone-scroll::-webkit-scrollbar{display:none;}
+.scroll-inner{padding-bottom:36px;}
+
+/* ── STATUS BAR ── */
+.status-bar{
+  height:54px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 26px 10px;font-size:12px;font-weight:700;
+  background:var(--hdr-bg);color:#fff;
+  position:sticky;top:0;z-index:90;
+}
+.sb-time{font-size:15px;font-weight:800;}
+.sb-right{display:flex;align-items:center;gap:5px;color:#fff;}
+
+/* ── DARK KIOSK HEADER ── */
+.app-header{
+  background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);
+  padding:0 20px 22px;position:relative;overflow:hidden;
+}
+.app-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.app-header::after{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,191,224,0.16),transparent 70%);pointer-events:none;}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.rs-mark{display:flex;align-items:center;gap:9px;}
+.rs-logo{width:32px;height:32px;border-radius:9px;background:var(--rs-grad);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#022818;box-shadow:0 4px 14px -4px rgba(0,191,224,0.5);flex-shrink:0;}
+.rs-name{font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff;}
+.rs-sub{font-size:10px;color:rgba(255,255,255,0.45);font-weight:500;margin-top:1px;}
+.hdr-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(0,196,122,0.12);border:1px solid rgba(0,196,122,0.35);border-radius:999px;padding:5px 11px;font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:var(--success);}
+.hdr-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse-dot 1.4s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+
+.lot-row{display:flex;align-items:flex-start;gap:11px;position:relative;z-index:1;padding-top:18px;}
+.lot-pin{width:42px;height:42px;border-radius:11px;flex-shrink:0;background:rgba(0,191,224,0.1);border:1px solid var(--hdr-border);display:grid;place-items:center;color:var(--rs-cyan);}
+.lot-pin svg{width:21px;height:21px;}
+.lot-name{font-size:19px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.15;margin-bottom:3px;background:var(--rs-grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.lot-addr{font-size:12px;color:rgba(255,255,255,0.45);font-weight:500;line-height:1.4;}
+.lot-tag{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--rs-teal);background:rgba(0,208,199,0.1);border:1px solid rgba(0,208,199,0.25);border-radius:999px;padding:3px 9px;}
+
+.plate-chip-hdr{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,191,224,0.1);border:1.5px solid rgba(0,191,224,0.50);
+  border-radius:9px;padding:7px 12px;margin-top:14px;
+}
+.plate-chip-hdr .pc-ico{width:15px;height:15px;background:var(--rs-cyan);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l1.5-4.5A2 2 0 0 1 8.5 5h7a2 2 0 0 1 2 1.5L19 11M5 16h14M6 11h12a2 2 0 0 1 2 2v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 11l1.5-4.5A2 2 0 0 1 8.5 5h7a2 2 0 0 1 2 1.5L19 11M5 16h14M6 11h12a2 2 0 0 1 2 2v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a2 2 0 0 1 2-2z'/%3E%3C/svg%3E") center/contain no-repeat;}
+.plate-chip-hdr .pc-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;letter-spacing:.06em;}
+.plate-chip-hdr .pc-state{font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.04em;}
+.plate-chip-hdr .pc-badge{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--rs-mint);background:rgba(0,251,148,0.1);border-radius:4px;padding:2px 6px;}
+
+/* ── LIGHT BODY ── */
+.body{padding:18px 16px 0;display:flex;flex-direction:column;gap:14px;}
+.sec-lbl{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px;}
+
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:17px;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+
+.prefilled-field{background:var(--bg-muted);border:1.5px solid rgba(0,191,224,0.50);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.pf-ico{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;}
+.pf-ico svg{width:17px;height:17px;}
+.pf-content{flex:1;}
+.pf-label{font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;}
+.pf-value{font-size:14.5px;font-weight:700;color:var(--text);}
+.pf-note{font-size:10px;color:var(--rs-cyan);font-weight:600;margin-top:2px;}
+.pf-check{width:22px;height:22px;border-radius:50%;background:rgba(0,196,122,0.12);flex-shrink:0;display:grid;place-items:center;color:var(--success);}
+.pf-check svg{width:12px;height:12px;}
+
+/* ── VEHICLE TYPE ── */
+.vtype-sublbl{font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:9px;letter-spacing:.03em;}
+.vtype-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.vtype-card{
+  background:var(--bg-card);border:2px solid var(--border);
+  border-radius:13px;padding:14px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;
+  transition:.15s;font-family:'Outfit',sans-serif;
+}
+.vtype-card:hover{border-color:var(--border-focus);background:var(--bg-muted);}
+.vtype-card .vt-ico{width:36px;height:36px;border-radius:10px;background:var(--bg-muted);color:var(--text-2);display:grid;place-items:center;transition:.15s;}
+.vtype-card .vt-ico svg{width:19px;height:19px;}
+.vtype-card .vt-name{font-size:13.5px;font-weight:800;color:var(--text);line-height:1;}
+.vtype-card .vt-desc{font-size:10.5px;color:var(--text-2);}
+.vtype-card.on{background:linear-gradient(160deg,rgba(0,191,224,0.08),rgba(0,251,148,0.04));border-color:var(--rs-cyan);box-shadow:0 0 0 3px rgba(0,191,224,0.10);}
+.vtype-card.on .vt-ico{background:rgba(0,191,224,0.12);color:var(--rs-cyan);}
+.vtype-card.on .vt-name{color:var(--rs-cyan);}
+
+/* ── PARKING TYPE ── */
+.ptype-sublbl{font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:9px;letter-spacing:.03em;}
+.ptype-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ptype-card{
+  background:var(--bg-card);border:2px solid var(--border);
+  border-radius:13px;padding:14px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  transition:.15s;font-family:'Outfit',sans-serif;
+}
+.ptype-card:hover{border-color:var(--border-focus);background:var(--bg-muted);}
+.ptype-card .pt-ico{width:36px;height:36px;border-radius:10px;background:var(--bg-muted);color:var(--text-2);display:grid;place-items:center;transition:.15s;}
+.ptype-card .pt-ico svg{width:19px;height:19px;}
+.ptype-card .pt-name{font-size:13px;font-weight:800;color:var(--text);line-height:1.1;}
+.ptype-card .pt-desc{font-size:10px;color:var(--text-2);line-height:1.4;}
+.ptype-card.on{background:linear-gradient(160deg,rgba(0,191,224,0.08),rgba(0,251,148,0.04));border-color:var(--rs-cyan);box-shadow:0 0 0 3px rgba(0,191,224,0.10);}
+.ptype-card.on .pt-ico{background:rgba(0,191,224,0.12);color:var(--rs-cyan);}
+.ptype-card.on .pt-name{color:var(--rs-cyan);}
+
+/* ── WALLET ROW ── */
+.wallet-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.w-btn{height:54px;border-radius:14px;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:700;transition:transform .12s,opacity .15s;}
+.w-btn:active{transform:scale(0.97);}
+.w-btn:disabled{opacity:.4;cursor:not-allowed;}
+.w-apple{background:#000;color:#fff;}
+.w-google{background:#fff;color:#3c4043;border:1.5px solid #b8c4d4;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.g-logo{display:flex;gap:0;}
+.g-logo span{font-size:17px;font-weight:900;line-height:1;}
+.gb{color:#4285F4}.gr{color:#EA4335}.gy{color:#FBBC04}.gg{color:#34A853}
+.g-pay-txt{font-size:14px;font-weight:600;color:#3c4043;margin-left:4px;}
+
+/* ── OR DIVIDER ── */
+.or-div{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--text-3);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.or-div::before,.or-div::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── CARD FORM ── */
+.card-reveal{display:none;margin-bottom:10px;animation:fadeUp .22s ease;}
+.card-reveal.show{display:block;}
+.card-form-inner{background:var(--bg-muted);border:1.5px solid rgba(0,191,224,0.50);border-radius:13px;overflow:hidden;display:grid;grid-template-columns:1fr 90px 80px;}
+.cf-cell{padding:11px 13px;border-bottom:1px solid var(--border);}
+.cf-cell.full{grid-column:1/-1;border-bottom:1px solid var(--border);}
+.cf-cell.no-border{border-bottom:0;}
+.cf-cell label{display:block;font-size:9.5px;color:var(--text-3);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.cf-cell input{width:100%;background:transparent;border:0;outline:0;color:var(--text);font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:600;}
+.cf-cell input::placeholder{color:var(--text-3);font-weight:500;}
+
+/* ── MAIN PAY BUTTON ── */
+.pay-btn{width:100%;padding:17px;border-radius:14px;background:var(--rs-grad);color:#022818;border:0;font-family:'Outfit',sans-serif;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 12px 32px -10px rgba(0,191,224,0.55);transition:transform .12s,opacity .15s;}
+.pay-btn:hover{transform:translateY(-1px);}
+.pay-btn:active{transform:scale(0.98);}
+.pay-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.pay-btn svg{width:18px;height:18px;}
+.secure-note{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--text-3);margin-top:10px;font-weight:500;}
+.secure-note svg{width:11px;height:11px;color:var(--rs-teal);}
+
+/* ── PAY OVERLAY ── */
+.pay-overlay{position:absolute;inset:12px;background:rgba(5,10,28,0.96);backdrop-filter:blur(12px);z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;border-radius:42px;}
+.pay-overlay.show{display:flex;}
+.pay-spinner{width:62px;height:62px;border-radius:50%;border:4px solid rgba(0,191,224,0.15);border-top-color:var(--rs-cyan);animation:spin .9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pay-overlay h2{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.pay-overlay p{font-size:13px;color:rgba(255,255,255,0.55);}
+.success-ring{width:76px;height:76px;border-radius:50%;background:var(--rs-grad);display:grid;place-items:center;color:#022818;transform:scale(0);animation:pop .5s cubic-bezier(.34,1.56,.64,1) forwards;box-shadow:0 12px 32px -8px rgba(0,191,224,0.6);}
+.success-ring svg{width:38px;height:38px;}
+@keyframes pop{from{transform:scale(0)}60%{transform:scale(1.1)}to{transform:scale(1)}}
+
+/* ── SESSION VIEW ── */
+.session-view{display:none;flex-direction:column;gap:13px;padding:0 0 28px;animation:fadeUp .3s ease;}
+.session-view.show{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Session header (dark) */
+.sess-hdr{background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);padding:14px 18px 18px;position:relative;overflow:hidden;}
+.sess-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.sess-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.sess-logo{width:28px;height:28px;border-radius:8px;background:var(--rs-grad);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#022818;flex-shrink:0;}
+.sess-loc-txt{font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;border-left:1px solid rgba(255,255,255,0.12);padding-left:10px;flex:1;}
+.sess-active-badge{display:inline-flex;align-items:center;gap:5px;background:var(--rs-grad);color:#022818;font-size:9.5px;font-weight:900;padding:5px 10px;border-radius:999px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 4px 12px -4px rgba(0,191,224,0.6);}
+.sess-active-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#022818;animation:pulse-dot 1.4s ease-in-out infinite;}
+
+/* ── HAMBURGER BUTTON ── */
+.hamburger-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4.5px;
+  width:34px;height:34px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);
+  border-radius:9px;cursor:pointer;flex-shrink:0;padding:0;transition:.15s;
+}
+.hamburger-btn:hover{background:rgba(0,191,224,0.18);border-color:rgba(0,191,224,0.4);}
+.hamburger-btn span{display:block;width:14px;height:1.5px;background:#fff;border-radius:2px;transition:.15s;}
+
+/* Timer card (dark, inside session header) */
+.timer-card{background:linear-gradient(145deg,#0a1830 0%,#0e2455 50%,#0a1830 100%);border:1px solid rgba(0,191,224,0.22);border-radius:18px;padding:18px 18px 16px;position:relative;overflow:hidden;box-shadow:0 12px 30px -15px rgba(0,191,224,0.30);}
+.timer-card::before{content:'';position:absolute;top:-30%;right:-15%;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,191,224,0.18),transparent 70%);}
+.timer-card>*{position:relative;z-index:1;}
+.timer-badge{position:absolute;top:12px;right:12px;z-index:5;display:inline-flex;align-items:center;gap:5px;background:var(--rs-grad);color:#022818;font-size:9px;font-weight:900;padding:4px 9px;border-radius:999px;letter-spacing:.08em;text-transform:uppercase;}
+.timer-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:#022818;animation:pulse-dot 1.4s ease-in-out infinite;}
+
+.timer-ring-wrap{display:flex;justify-content:center;margin-bottom:8px;}
+.timer-ring{width:210px;height:210px;position:relative;}
+.timer-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.t-track{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:8;}
+.t-prog{fill:none;stroke:url(#rsGrad);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 0 7px rgba(0,191,224,0.55));}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;}
+.ring-head{font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:8px;}
+.countdown{display:flex;align-items:flex-start;justify-content:center;gap:3px;}
+.cnt-blk{display:flex;flex-direction:column;align-items:center;}
+.cnt-num{font-size:30px;font-weight:800;letter-spacing:-.025em;line-height:1;background:linear-gradient(180deg,#fff 0%,rgba(0,208,199,0.8) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.cnt-lbl{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:3px;}
+.cnt-colon{font-size:24px;font-weight:300;color:rgba(255,255,255,0.3);line-height:1;margin-top:2px;animation:blink 1s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.ring-price{font-size:10px;color:var(--rs-teal);font-weight:700;letter-spacing:.06em;margin-top:5px;display:flex;align-items:center;gap:4px;}
+.ring-price svg{width:10px;height:10px;}
+
+.expires-strip{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);}
+.exp-col{font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:.09em;text-transform:uppercase;font-weight:700;}
+.exp-col b{display:block;color:#fff;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none;margin-top:3px;}
+.exp-col small{display:block;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0;text-transform:none;font-weight:500;margin-top:1px;}
+.exp-col.right{text-align:right;}
+
+/* Light session body */
+.sess-body{padding:14px 16px 0;display:flex;flex-direction:column;gap:12px;}
+
+.drive-card{background:linear-gradient(135deg,rgba(0,191,224,0.07),rgba(0,251,148,0.04));border:1px solid rgba(0,191,224,0.25);border-radius:14px;padding:13px;display:flex;align-items:flex-start;gap:12px;}
+.drive-ico{width:38px;height:38px;border-radius:10px;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.drive-ico svg{width:20px;height:20px;}
+.drive-txt b{display:block;font-size:13.5px;font-weight:800;color:var(--rs-cyan);margin-bottom:3px;}
+.drive-txt small{font-size:11.5px;color:var(--text-2);line-height:1.5;}
+
+.plate-sess-card{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+.plate-display{font-family:'JetBrains Mono',monospace;background:var(--rs-grad);color:#022818;font-size:17px;font-weight:800;padding:8px 14px;border-radius:7px;letter-spacing:.04em;flex-shrink:0;box-shadow:0 4px 14px -4px rgba(0,191,224,0.4);}
+.plate-meta b{display:block;font-size:13px;color:var(--text);font-weight:700;}
+.plate-meta small{display:block;font-size:11px;color:var(--text-2);margin-top:1px;}
+.plate-tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.p-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(0,191,224,0.08);border:1px solid rgba(0,191,224,0.22);color:var(--rs-cyan);font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.04em;}
+
+.detail-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(12,26,46,0.05);}
+.d-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.d-row:last-child{border-bottom:0;}
+.d-ico{width:32px;height:32px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.d-ico svg{width:15px;height:15px;}
+.d-content small{display:block;font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
+.d-content b{display:block;font-size:13.5px;color:var(--text);font-weight:600;margin-top:1px;}
+.d-right{font-size:12px;color:var(--text-2);font-weight:600;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+.rate-chart-btn{width:100%;background:var(--bg-card);border:2px solid var(--border-focus);border-radius:13px;padding:13px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:'Outfit',sans-serif;color:var(--text);transition:.15s;text-align:left;box-shadow:0 0 0 3px rgba(0,191,224,0.10),0 1px 4px rgba(12,26,46,0.05);}
+.rate-chart-btn:hover{background:var(--bg-muted);border-color:var(--rs-teal);box-shadow:0 0 0 4px rgba(0,191,224,0.16);}
+.rc-ico{width:34px;height:34px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.rc-ico svg{width:17px;height:17px;}
+.rc-txt b{display:block;font-size:13px;font-weight:700;color:var(--text);}
+.rc-txt small{display:block;font-size:11px;color:var(--text-3);font-weight:500;}
+.rc-chev{color:var(--text-3);width:14px;height:14px;margin-left:auto;flex-shrink:0;}
+
+/* Vehicle toast */
+.v-toast{position:absolute;top:90px;left:50%;transform:translateX(-50%) scale(0);background:rgba(255,79,79,0.12);border:1px solid rgba(255,79,79,0.35);color:#ff6b6b;padding:10px 16px;border-radius:999px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;z-index:35;white-space:nowrap;pointer-events:none;backdrop-filter:blur(8px);}
+.v-toast.show{animation:toast-pop 2.4s ease-out forwards;}
+@keyframes toast-pop{0%{transform:translateX(-50%) scale(0)}15%{transform:translateX(-50%) scale(1.04)}25%{transform:translateX(-50%) scale(1)}80%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(.95);opacity:0}}
+.v-toast svg{width:14px;height:14px;}
+
+/* Rate sheet */
+.sheet-backdrop{position:absolute;inset:12px;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);display:none;z-index:50;border-radius:42px;}
+.sheet-backdrop.show{display:block;}
+.rate-sheet{position:absolute;left:12px;right:12px;bottom:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:22px 22px 42px 42px;padding:18px 18px 20px;z-index:51;display:none;flex-direction:column;gap:12px;max-height:75%;overflow-y:auto;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);box-shadow:0 -8px 30px -8px rgba(12,26,46,0.15);}
+.rate-sheet.show{display:flex;transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 4px;}
+.rate-table{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.rate-trow{display:flex;justify-content:space-between;padding:10px 13px;font-size:12.5px;background:var(--bg-card);border-bottom:1px solid var(--border);}
+.rate-trow:last-child{border-bottom:0;}
+.rate-trow .rd{color:var(--text-2);font-weight:500;}
+.rate-trow .rp{color:var(--text);font-weight:700;font-family:'JetBrains Mono',monospace;}
+.rate-trow.rmax{background:linear-gradient(90deg,rgba(0,251,148,0.07),rgba(0,251,148,0.02));}
+.rate-trow.rmax .rd,.rate-trow.rmax .rp{color:#00A06A;font-weight:800;}
+.rate-trow.rcur{background:linear-gradient(90deg,rgba(0,191,224,0.10),rgba(0,191,224,0.02));}
+.rate-trow.rcur .rd,.rate-trow.rcur .rp{color:var(--rs-cyan);font-weight:800;}
+.rate-trow.rfee{background:rgba(245,158,11,0.04);border-top:2px solid var(--border);}
+.rate-trow.rfee .rd{color:var(--text-3);font-size:11.5px;}
+.rate-trow.rfee .rp{color:var(--text-2);}
+.now-lbl{display:inline-block;background:var(--rs-cyan);color:#022818;font-size:9px;font-weight:900;letter-spacing:.1em;padding:2px 6px;border-radius:4px;margin-right:7px;vertical-align:1px;}
+.sheet-close{width:100%;padding:11px;background:transparent;border:0;color:var(--text-2);font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;}
+.sheet-close:hover{color:var(--text);}
+
+/* ═══════════════════════════════════════
+   MENU PANEL
+═══════════════════════════════════════ */
+.menu-panel{
+  position:absolute;top:0;right:0;bottom:0;width:50%;
+  background:var(--bg);
+  z-index:95;
+  transform:translateX(100%);
+  transition:transform .38s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  box-shadow:-6px 0 28px rgba(0,0,0,0.3);
+}
+.menu-panel.open{transform:translateX(0);}
+/* Scrim behind the half-panel */
+.menu-overlay{position:absolute;inset:0;background:rgba(0,0,0,0);z-index:94;pointer-events:none;transition:background .38s cubic-bezier(.32,.72,0,1);}
+.menu-overlay.show{background:rgba(0,0,0,0.45);pointer-events:auto;}
+
+/* Menu scrollable body — home list */
+.mp-home-hdr{background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);padding:54px 14px 14px;flex-shrink:0;position:relative;}
+.mp-home-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.mp-home-hdr-row{display:flex;align-items:center;gap:8px;}
+
+/* Nav list items */
+.mp-nav-list{display:flex;flex-direction:column;padding-bottom:28px;}
+.mp-nav-item{display:flex;align-items:center;gap:10px;padding:13px 14px;background:var(--bg-card);border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.mp-nav-item:hover{background:var(--bg-muted);}
+.mp-nav-item:active{background:rgba(0,191,224,0.06);}
+.mp-nav-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.mp-nav-ico svg{width:17px;height:17px;}
+.mp-nav-txt{flex:1;min-width:0;}
+.mp-nav-title{font-size:13px;font-weight:700;color:var(--text);display:block;letter-spacing:-.01em;}
+.mp-nav-sub{font-size:10px;color:var(--text-3);font-weight:500;margin-top:1px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-nav-chev{width:12px;height:12px;color:var(--text-3);flex-shrink:0;}
+
+/* Menu home view */
+.mp-home{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.mp-home-body{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;background:var(--bg-muted);}
+.mp-home-body::-webkit-scrollbar{display:none;}
+
+/* Full-screen section pages — independent of menu panel */
+.sec-page{position:absolute;inset:0;background:var(--bg);z-index:97;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);}
+.sec-page.open{transform:translateX(0);}
+.sec-hdr{background:linear-gradient(180deg,var(--hdr-bg) 0%,var(--hdr-bg2) 100%);padding:54px 20px 16px;flex-shrink:0;position:relative;}
+.sec-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rs-grad);}
+.sec-hdr-row{display:flex;align-items:center;gap:12px;}
+.sec-back{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.7);font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;padding:6px 11px;cursor:pointer;transition:.15s;flex-shrink:0;}
+.sec-back:hover{background:rgba(255,255,255,0.14);color:#fff;}
+.sec-back svg{width:13px;height:13px;}
+.sec-title{flex:1;font-size:17px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.sec-ham{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4.5px;width:34px;height:34px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:9px;cursor:pointer;flex-shrink:0;transition:.15s;padding:0;}
+.sec-ham:hover{background:rgba(0,191,224,0.18);border-color:rgba(0,191,224,0.4);}
+.sec-ham span{display:block;width:14px;height:1.5px;background:#fff;border-radius:2px;}
+.sec-body{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:16px;}
+.sec-body::-webkit-scrollbar{display:none;}
+.mp-sec-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;margin-top:6px;}
+
+.mp-hdr-title{color:#fff;font-weight:800;letter-spacing:-.01em;}
+
+/* ── SUBSCRIPTION PAGE ── */
+.sub-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;}
+.sub-action-btn{padding:11px 8px;border-radius:11px;font-family:'Outfit',sans-serif;font-size:12.5px;font-weight:800;cursor:pointer;transition:.15s;border:0;display:flex;align-items:center;justify-content:center;gap:6px;}
+.sub-action-btn svg{width:14px;height:14px;flex-shrink:0;}
+.sub-action-upgrade{background:var(--rs-grad);color:#022818;box-shadow:0 6px 18px -6px rgba(0,191,224,0.5);}
+.sub-action-upgrade:hover{transform:translateY(-1px);}
+.sub-action-cancel{background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.3);color:var(--rose);}
+.sub-action-cancel:hover{background:rgba(239,68,68,0.14);}
+
+.sub-find-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:16px 0 10px;display:flex;align-items:center;gap:8px;}
+.sub-find-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.sub-search-wrap{position:relative;margin-bottom:10px;}
+.sub-search{width:100%;padding:10px 13px 10px 38px;background:var(--bg-card);border:1.5px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text);outline:none;transition:.15s;}
+.sub-search:focus{border-color:var(--border-focus);}
+.sub-search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-3);}
+.sub-search-ico svg{width:15px;height:15px;}
+.resolve-map-wrap{border-radius:13px;overflow:hidden;border:1px solid var(--border);height:220px;position:relative;}
+#subMap{height:220px;width:100%;}
+.map-tip{text-align:center;padding:8px 0 0;font-size:11px;color:var(--text-3);font-weight:500;}
+.map-tip span{color:var(--rs-cyan);font-weight:700;}
+
+/* Bottom sheets inside sec-page */
+.sec-sheet-bd{position:absolute;inset:0;background:rgba(0,0,0,0.5);z-index:10;display:none;border-radius:inherit;}
+.sec-sheet-bd.show{display:block;}
+.sec-sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg-card);border-radius:18px 18px 0 0;padding:18px;z-index:11;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:75%;overflow-y:auto;}
+.sec-sheet.show{transform:translateY(0);}
+.sec-sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+.sec-sheet-title{font-size:16px;font-weight:900;color:var(--text);letter-spacing:-.01em;margin-bottom:4px;}
+.sec-sheet-sub{font-size:12px;color:var(--text-2);margin-bottom:14px;line-height:1.5;}
+.pass-opt{background:var(--bg-muted);border:1.5px solid var(--border);border-radius:12px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.15s;margin-bottom:9px;}
+.pass-opt:hover{border-color:var(--border-focus);}
+.pass-opt.selected{border-color:var(--rs-cyan);background:linear-gradient(135deg,rgba(0,191,224,0.08),rgba(0,251,148,0.04));}
+.pass-opt-ico{width:38px;height:38px;border-radius:10px;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;}
+.pass-opt-ico svg{width:19px;height:19px;}
+.pass-opt-info{flex:1;}
+.pass-opt-name{font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:2px;}
+.pass-opt-desc{font-size:11px;color:var(--text-2);}
+.pass-opt-price{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:var(--rs-cyan);flex-shrink:0;}
+.sheet-action-btn{width:100%;padding:13px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;border:0;transition:transform .12s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;}
+.sheet-action-btn svg{width:15px;height:15px;}
+.sheet-action-primary{background:var(--rs-grad);color:#022818;box-shadow:0 8px 24px -8px rgba(0,191,224,0.5);}
+.sheet-action-primary:hover{transform:translateY(-1px);}
+.sheet-action-danger{background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.3);color:var(--rose);}
+.sheet-action-ghost{background:transparent;border:0;color:var(--text-3);font-size:12.5px;margin-top:6px;}
+
+/* ── SETTINGS PAGE ── */
+.settings-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;}
+.sf-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.sf-row:last-child{border-bottom:0;}
+.sf-label{font-size:10.5px;font-weight:700;color:var(--text-3);letter-spacing:.05em;text-transform:uppercase;width:76px;flex-shrink:0;}
+.sf-input{flex:1;background:transparent;border:0;outline:0;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--text);}
+.sf-input::placeholder{color:var(--text-3);font-weight:400;}
+.email-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:11px;margin-bottom:8px;}
+.email-item-addr{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+.email-item-primary{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--success);background:rgba(0,196,122,0.1);border:1px solid rgba(0,196,122,0.28);border-radius:999px;padding:2px 7px;}
+.email-remove-btn{font-size:11px;font-weight:700;color:var(--rose);background:none;border:0;cursor:pointer;font-family:'Outfit',sans-serif;padding:4px 6px;}
+.add-email-btn{width:100%;padding:12px;background:transparent;border:2px dashed var(--border);border-radius:12px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;margin-bottom:16px;}
+.add-email-btn:hover{border-color:var(--border-focus);color:var(--rs-cyan);}
+.add-email-btn svg{width:15px;height:15px;}
+.settings-save-btn{width:100%;padding:14px;border-radius:12px;background:var(--rs-grad);color:#022818;border:0;font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 8px 24px -8px rgba(0,191,224,0.5);transition:transform .12s;}
+.settings-save-btn:hover{transform:translateY(-1px);}
+.act-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;}
+.act-filters::-webkit-scrollbar{display:none;}
+.act-chip{flex-shrink:0;padding:6px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--bg-card);font-family:'Outfit',sans-serif;font-size:11.5px;font-weight:700;color:var(--text-2);cursor:pointer;transition:.15s;}
+.act-chip:hover{border-color:var(--border-focus);color:var(--text);}
+.act-chip.on{background:rgba(0,191,224,0.1);border-color:var(--rs-cyan);color:var(--rs-cyan);}
+
+.act-list{display:flex;flex-direction:column;gap:9px;}
+.act-item{background:var(--bg-card);border:1px solid var(--border);border-radius:13px;overflow:hidden;box-shadow:0 1px 4px rgba(12,26,46,0.04);}
+.act-item-hdr{display:flex;align-items:center;gap:10px;padding:11px 13px;}
+.act-type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.act-type-dot.visit{background:var(--rs-cyan);}
+.act-type-dot.refund{background:var(--success);}
+.act-type-dot.reservation{background:var(--amber);}
+.act-type-dot.subscription{background:var(--rs-blue);}
+.act-type-lbl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+.act-type-lbl.visit{color:var(--rs-cyan);}
+.act-type-lbl.refund{color:var(--success);}
+.act-type-lbl.reservation{color:var(--amber);}
+.act-type-lbl.subscription{color:var(--rs-blue);}
+.act-date{font-size:11px;color:var(--text-3);font-weight:500;margin-left:auto;}
+.act-amount{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;}
+.act-amount.pos{color:var(--text);}
+.act-amount.neg{color:var(--success);}
+
+.act-item-body{padding:0 13px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;}
+.act-field small{display:block;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:2px;}
+.act-field b{display:block;font-size:11.5px;color:var(--text);font-weight:600;}
+.act-field.full{grid-column:1/-1;}
+.act-plate-tag{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;background:rgba(0,191,224,0.08);color:var(--rs-cyan);border:1px solid rgba(0,191,224,0.22);border-radius:5px;padding:2px 7px;margin-top:2px;}
+
+/* ── PAYMENT SECTION ── */
+.pm-list{display:flex;flex-direction:column;gap:9px;margin-bottom:14px;}
+.pm-item{background:var(--bg-card);border:1.5px solid var(--border);border-radius:13px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.15s;}
+.pm-item:hover{border-color:var(--border-focus);}
+.pm-item.primary{border-color:var(--rs-cyan);background:linear-gradient(135deg,rgba(0,191,224,0.06),rgba(0,251,148,0.03));}
+.pm-icon-wrap{width:40px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:900;}
+.pm-icon-visa{background:linear-gradient(135deg,#1A1F71,#1434CB);color:#fff;}
+.pm-icon-ap{background:#000;color:#fff;font-size:14px;}
+.pm-icon-gp{background:#fff;border:1px solid #dde3ed;}
+.pm-info{flex:1;}
+.pm-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.pm-sub{font-size:11px;color:var(--text-3);font-weight:500;}
+.pm-primary-badge{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--success);background:rgba(0,196,122,0.1);border:1px solid rgba(0,196,122,0.3);border-radius:999px;padding:3px 8px;flex-shrink:0;}
+.pm-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:.15s;display:grid;place-items:center;}
+.pm-radio.checked{border-color:var(--rs-cyan);}
+.pm-radio.checked::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--rs-cyan);}
+.pm-add-btn{width:100%;padding:13px;background:transparent;border:2px dashed var(--border);border-radius:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;}
+.pm-add-btn:hover{border-color:var(--border-focus);color:var(--rs-cyan);}
+.pm-add-btn svg{width:16px;height:16px;}
+
+/* ── SUBSCRIPTIONS SECTION ── */
+.sub-active-card{background:linear-gradient(135deg,#081431,#0e2455);border:1px solid rgba(0,191,224,0.28);border-radius:14px;padding:15px;position:relative;overflow:hidden;margin-bottom:16px;}
+.sub-active-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--rs-grad);}
+.sub-act-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.sub-act-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(0,196,122,0.15);border:1px solid rgba(0,196,122,0.3);border-radius:999px;padding:3px 9px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--success);}
+.sub-act-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--success);}
+.sub-act-loc{font-size:14px;font-weight:800;color:#fff;margin-bottom:2px;background:var(--rs-grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.sub-act-addr{font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:10px;}
+.sub-act-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sub-act-field small{display:block;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:2px;}
+.sub-act-field b{display:block;font-size:12.5px;color:#fff;font-weight:700;}
+
+/* Subscription location activity separator */
+.sub-loc-divider{display:flex;align-items:center;gap:8px;margin:14px 0 10px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);}
+.sub-loc-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── VEHICLES SECTION ── */
+.veh-list{display:flex;flex-direction:column;gap:9px;}
+.veh-item{background:var(--bg-card);border:1.5px solid var(--border);border-radius:13px;padding:13px 14px;display:flex;align-items:center;gap:12px;}
+.veh-item.primary-veh{border-color:var(--rs-cyan);background:linear-gradient(135deg,rgba(0,191,224,0.05),rgba(0,251,148,0.02));}
+.veh-plate{font-family:'JetBrains Mono',monospace;background:var(--rs-grad);color:#022818;font-size:13px;font-weight:800;padding:6px 11px;border-radius:6px;letter-spacing:.04em;flex-shrink:0;box-shadow:0 3px 10px -4px rgba(0,191,224,0.4);}
+.veh-info{flex:1;}
+.veh-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.veh-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+.veh-tag{display:inline-flex;align-items:center;font-size:9.5px;font-weight:700;background:rgba(0,191,224,0.08);color:var(--rs-cyan);border:1px solid rgba(0,191,224,0.22);border-radius:999px;padding:2px 8px;}
+.veh-actions{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;}
+.veh-primary-badge{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--success);background:rgba(0,196,122,0.1);border:1px solid rgba(0,196,122,0.28);border-radius:999px;padding:3px 8px;white-space:nowrap;}
+.veh-edit-btn{font-size:10.5px;font-weight:600;color:var(--text-3);background:none;border:0;cursor:pointer;font-family:'Outfit',sans-serif;padding:3px 0;}
+.veh-edit-btn:hover{color:var(--rs-cyan);}
+.veh-add-btn{width:100%;padding:13px;background:transparent;border:2px dashed var(--border);border-radius:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;margin-top:4px;}
+.veh-add-btn:hover{border-color:var(--border-focus);color:var(--rs-cyan);}
+.veh-add-btn svg{width:16px;height:16px;}
+
+/* ── HELP SECTION ── */
+.help-card{background:linear-gradient(135deg,rgba(0,191,224,0.07),rgba(0,251,148,0.04));border:1px solid rgba(0,191,224,0.25);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;}
+.help-ico{width:52px;height:52px;border-radius:14px;background:rgba(0,191,224,0.1);color:var(--rs-cyan);display:grid;place-items:center;}
+.help-ico svg{width:26px;height:26px;}
+.help-title{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.01em;}
+.help-sub{font-size:12.5px;color:var(--text-2);line-height:1.6;}
+.help-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:var(--rs-grad);color:#022818;border:0;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px -8px rgba(0,191,224,0.5);transition:transform .12s;text-decoration:none;}
+.help-btn:hover{transform:translateY(-1px);}
+.help-btn svg{width:15px;height:15px;}
+.help-note{font-size:11px;color:var(--text-3);}
+</style>
+</head>
+<body>
+
+<!-- URL bar -->
+<div class="url-bar">
+  <div class="url-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+  <div class="url-text">park.resolveparking.com/s2p?lot=KKP&amp;plate=BCT2401</div>
+  <div class="url-tag">S2P</div>
+</div>
+
+<div class="device-outer">
+<div class="device">
+  <div class="d-island"><div class="di-cam"></div><div class="di-dot"></div></div>
+
+  <div class="screen-wrap">
+    <div class="phone-scroll" id="scroller">
+    <div class="scroll-inner">
+
+      <!-- Status bar -->
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="1" opacity=".3"/><rect x="4.5" y="2" width="3" height="10" rx="1" opacity=".5"/><rect x="9" y=".5" width="3" height="11.5" rx="1" opacity=".7"/><rect x="13.5" y="0" width="3.5" height="12" rx="1"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.4C5.6 2.4 3.5 3.4 2 5L0 3C2.1 1.1 4.9 0 8 0s5.9 1.1 8 3l-2 2c-1.5-1.6-3.6-2.6-6-2.6z" opacity=".3"/><path d="M8 5.6c-1.4 0-2.7.5-3.6 1.4L2.5 5.1C3.9 3.8 5.9 3 8 3s4.1.8 5.5 2.1L11.6 7c-.9-.9-2.2-1.4-3.6-1.4z" opacity=".6"/><path d="M8 8.8c-.8 0-1.5.3-2 .8L4 7.8C5 6.7 6.4 6 8 6s3 .7 4 1.8l-2 1.8c-.5-.5-1.2-.8-2-.8z"/><circle cx="8" cy="11.5" r="1.5"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="22" height="10" rx="2.5" stroke="currentColor" stroke-width="1" fill="none" opacity=".3"/><rect x="1.5" y="2.5" width="16" height="7" rx="1.5"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z"/></svg>
+        </div>
+      </div>
+
+      <!-- PAY FORM -->
+      <div id="payForm">
+        <div class="app-header">
+          <div class="lot-row">
+            <div class="lot-pin">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div>
+              <div class="lot-name">King Kalakaua Plaza</div>
+              <div class="lot-addr">Lot B · 2201 Kalakaua Ave, Honolulu, HI</div>
+            </div>
+          </div>
+
+          <div class="plate-chip-hdr" id="plateChipWrap">
+            <div class="pc-ico"></div>
+            <span class="pc-state" id="plateStateLabel">FL ·</span>
+            <input id="plateInput" class="pc-val" value="BCT-2401" maxlength="8"
+              style="background:transparent;border:none;outline:none;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff;letter-spacing:.06em;width:80px;text-transform:uppercase;"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');syncPlate();" />
+            <span class="pc-badge">EDITABLE</span>
+            <button onclick="document.getElementById('plateInput').focus()" title="Edit plate"
+              style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.5);padding:0;display:flex;align-items:center;margin-left:2px;transition:.15s;"
+              onmouseover="this.style.color='var(--rs-cyan)'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="card">
+            <div class="sec-lbl">Your Details</div>
+            <div class="prefilled-field">
+              <div class="pf-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.86 13 19.79 19.79 0 0 1 1.82 4.16 2 2 0 0 1 3.8 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91A16 16 0 0 0 13 14.09l.91-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.16z"/></svg>
+              </div>
+              <div class="pf-content">
+                <div class="pf-label">Mobile Number</div>
+                <div class="pf-value">(808) 555-2401</div>
+                <div class="pf-note">✓ Verified from your SMS link</div>
+              </div>
+              <div class="pf-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="sec-lbl">Vehicle Type</div>
+            <div class="vtype-sublbl">Select one to continue</div>
+            <div class="vtype-row">
+              <button type="button" class="vtype-card" data-v="personal" onclick="selectVtype(this)">
+                <div class="vt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg></div>
+                <div class="vt-name">Personal</div>
+                <div class="vt-desc">My own vehicle</div>
+              </button>
+              <button type="button" class="vtype-card" data-v="temporary" onclick="selectVtype(this)">
+                <div class="vt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M21 3l-3 3M3 3l3 3"/></svg></div>
+                <div class="vt-name">Temporary</div>
+                <div class="vt-desc">Rental or borrowed</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="sec-lbl">Parking Type</div>
+            <div class="ptype-sublbl">Choose how you'd like to park</div>
+            <div class="ptype-row">
+              <button type="button" class="ptype-card on" data-p="standard" onclick="selectPtype(this)">
+                <div class="pt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M9 2h6"/></svg></div>
+                <div class="pt-name">Standard Parking</div>
+                <div class="pt-desc">Pay as you go</div>
+              </button>
+              <button type="button" class="ptype-card" data-p="24hr" onclick="selectPtype(this)">
+                <div class="pt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+                <div class="pt-name">24 Hour Parking</div>
+                <div class="pt-desc">In/out access included</div>
+              </button>
+            </div>
+          </div>
+
+          <button onclick="openRate()" style="width:100%;background:var(--bg-card);border:2px solid rgba(0,191,224,0.55);border-radius:13px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:'Outfit',sans-serif;color:var(--text);text-align:left;transition:.15s;box-shadow:0 0 0 3px rgba(0,191,224,0.08);" onmouseover="this.style.borderColor='var(--rs-cyan)'" onmouseout="this.style.borderColor='rgba(0,191,224,0.35)'">
+            <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;background:rgba(0,191,224,0.10);color:var(--rs-cyan);display:grid;place-items:center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:13.5px;font-weight:700;color:var(--text);">View Rate Chart</div>
+              <div style="font-size:11px;color:var(--text-3);font-weight:500;margin-top:1px;" id="rateChartSub">$8.00/hr · $80.00 daily max</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);flex-shrink:0;"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+
+          <div class="card">
+            <div class="sec-lbl">Payment Method</div>
+            <div class="wallet-row">
+              <button class="w-btn w-apple" onclick="startPay('Apple Pay')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Pay
+              </button>
+              <button class="w-btn w-google" onclick="startPay('Google Pay')">
+                <div class="g-logo"><span class="gb">G</span><span class="gr">o</span><span class="gy">o</span><span class="gb">g</span><span class="gg">l</span><span class="gr">e</span></div>
+                <span class="g-pay-txt">Pay</span>
+              </button>
+            </div>
+
+            <div class="or-div">or pay with card</div>
+
+            <div class="card-reveal" id="cardReveal">
+              <div class="card-form-inner">
+                <div class="cf-cell full"><label>Card Number</label><input id="cardNum" placeholder="1234 1234 1234 1234" inputmode="numeric" maxlength="19" autocomplete="cc-number"/></div>
+                <div class="cf-cell"><label>Expiry</label><input id="cardExp" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp"/></div>
+                <div class="cf-cell"><label>CVC</label><input placeholder="•••" inputmode="numeric" maxlength="4" autocomplete="cc-csc"/></div>
+                <div class="cf-cell no-border"><label>ZIP</label><input placeholder="96815" inputmode="numeric" maxlength="5" autocomplete="postal-code"/></div>
+              </div>
+            </div>
+
+            <button class="pay-btn" id="payBtn" onclick="handlePayBtn()" style="margin-top:10px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+              <span id="payBtnTxt">Add payment method</span>
+            </button>
+
+            <div class="secure-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              256-bit encrypted · Powered by Resolve
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /payForm -->
+
+      <!-- SESSION VIEW -->
+      <div id="sessionView" class="session-view">
+
+        <div class="sess-hdr">
+          <div class="sess-brand-row">
+            <div class="sess-logo">R</div>
+            <div class="sess-loc-txt">King Kalakaua Plaza · Lot B</div>
+            <button class="hamburger-btn" id="hamburgerBtn" onclick="openMenu()">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
+
+          <div class="timer-card">
+            <div class="timer-badge">Active</div>
+            <div class="timer-ring-wrap">
+              <div class="timer-ring">
+                <svg viewBox="0 0 210 210">
+                  <defs>
+                    <linearGradient id="rsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#00FB94"/>
+                      <stop offset="50%" stop-color="#00D0C7"/>
+                      <stop offset="100%" stop-color="#00A5FA"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="t-track" cx="105" cy="105" r="93"/>
+                  <circle class="t-prog" id="tProg" cx="105" cy="105" r="93" stroke-dasharray="584.34" stroke-dashoffset="0"/>
+                </svg>
+                <div class="ring-center">
+                  <div class="ring-head">Time Parked</div>
+                  <div class="countdown">
+                    <div class="cnt-blk"><div class="cnt-num" id="tH">00</div><div class="cnt-lbl">hrs</div></div>
+                    <div class="cnt-colon">:</div>
+                    <div class="cnt-blk"><div class="cnt-num" id="tM">00</div><div class="cnt-lbl">min</div></div>
+                    <div class="cnt-colon">:</div>
+                    <div class="cnt-blk"><div class="cnt-num" id="tS">00</div><div class="cnt-lbl">sec</div></div>
+                  </div>
+                  <div class="ring-price" id="ringPrice">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>
+                    <span id="ringPriceTxt">FREE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="expires-strip">
+              <div class="exp-col">Started at<b id="sessStartTime">—</b><small id="sessStartDate">—</small></div>
+              <div class="exp-col right" id="sessRateCol">Rate<b id="sessRateAmt">$8.00 / hr</b><small id="sessRateCap">$80.00 daily max</small></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sess-body">
+
+          <div class="drive-card">
+            <div class="drive-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg></div>
+            <div class="drive-txt">
+              <b>Just drive out to pay</b>
+              <small>Plate-recognition cameras at the exit close your session automatically. No need to return to your phone.</small>
+            </div>
+          </div>
+
+          <div class="plate-sess-card">
+            <div class="plate-display" id="sessPlate">BCT-2401</div>
+            <div class="plate-meta">
+              <b>Florida</b>
+              <small>1 active session</small>
+              <div class="plate-tags">
+                <div class="p-tag" id="sessVtypeTag">Personal</div>
+                <div class="p-tag">Lot B</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <div class="d-content"><small>Entry Time</small><b id="dEntryTime">—</b></div>
+              <div class="d-right" id="dEntryDate">—</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg></div>
+              <div class="d-content"><small>Payment</small><b id="dPayMethod">—</b></div>
+              <div class="d-right" style="color:var(--success);font-family:'Outfit',sans-serif;font-weight:700;">✓ Auth</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              <div class="d-content"><small>Running Total</small><b id="dTotal">$1.50</b></div>
+              <div class="d-right" style="font-size:11px;color:var(--text-3);font-family:'Outfit',sans-serif;">incl. $1.50 fee</div>
+            </div>
+            <div class="d-row">
+              <div class="d-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+              <div class="d-content"><small>Session Status</small><b>Active · Gate opens on exit</b></div>
+              <div class="d-right" style="color:var(--success);font-family:'Outfit',sans-serif;font-size:16px;">●</div>
+            </div>
+          </div>
+
+          <button class="rate-chart-btn" onclick="openRate()">
+            <div class="rc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></div>
+            <div class="rc-txt"><b>View complete rate chart</b><small id="rateChartSub2">$8.00/hr · $80.00 daily max + $1.50 fee</small></div>
+            <svg class="rc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+
+          <div class="secure-note" style="margin-top:2px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Resolve · support.resolveparking.com
+          </div>
+        </div>
+      </div>
+
+    </div></div><!-- /scroll-inner /phone-scroll -->
+
+    <div class="home-ind"></div>
+
+    <!-- Pay overlay -->
+    <div class="pay-overlay" id="payOverlay">
+      <div id="overlayContent"><div class="pay-spinner"></div></div>
+      <h2 id="overlayTitle">Processing payment</h2>
+      <p id="overlaySub">Securely contacting your bank…</p>
+    </div>
+
+    <!-- Vehicle toast -->
+    <div class="v-toast" id="vToast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Please select vehicle type first
+    </div>
+
+    <!-- Rate sheet -->
+    <div class="sheet-backdrop" id="rateBackdrop" onclick="closeRate()"></div>
+    <div class="rate-sheet" id="rateSheet">
+      <div class="sheet-handle"></div>
+      <div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-.01em;">Rate Chart</div>
+      <div style="font-size:12px;color:var(--text-2);" id="rateSheetSub">King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$8.00 per hour</b>, capped at <b style="color:var(--text)">$80.00 / day</b></div>
+      <div class="rate-table" id="rateTable"></div>
+      <div style="font-size:11px;color:var(--text-3);line-height:1.6;">Validation codes from participating merchants accepted.<br>Questions? (808) 555-0100</div>
+      <button class="sheet-close" onclick="closeRate()">Close</button>
+    </div>
+
+    <!-- scrim behind half-panel -->
+    <div class="menu-overlay" id="menuOverlay" onclick="closeMenu()"></div>
+
+    <!-- ═══════════════════════════════════════
+         MENU PANEL
+    ═══════════════════════════════════════ -->
+    <div class="menu-panel" id="menuPanel">
+
+      <!-- HOME — nav list -->
+      <div class="mp-home" id="mpHome">
+        <div class="mp-home-hdr">
+          <div class="mp-home-hdr-row">
+            <button class="mp-back" onclick="closeMenu()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="mp-hdr-title" style="flex:1;font-size:13px;color:#fff;">My Account</div>
+            <div class="mp-acct-ava" style="width:26px;height:26px;border-radius:50%;background:var(--rs-grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#022818;flex-shrink:0;">G</div>
+          </div>
+        </div>
+
+        <div class="mp-home-body">
+          <div class="mp-nav-list">
+
+            <div class="mp-nav-item" onclick="openSection('activity')">
+              <div class="mp-nav-ico" style="background:rgba(0,191,224,0.1);color:var(--rs-cyan);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Activity</span>
+                <span class="mp-nav-sub">All Resolve locations · 7 records</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+            <div class="mp-nav-item" onclick="openSection('payment')">
+              <div class="mp-nav-ico" style="background:rgba(0,165,250,0.1);color:var(--rs-blue);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Payment</span>
+                <span class="mp-nav-sub">Visa •••• 4242 · Primary</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+            <div class="mp-nav-item" onclick="openSection('subscriptions')">
+              <div class="mp-nav-ico" style="background:rgba(0,196,122,0.1);color:var(--success);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Subscriptions</span>
+                <span class="mp-nav-sub">1 active · King Kalakaua Plaza</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+            <div class="mp-nav-item" onclick="openSection('vehicles')">
+              <div class="mp-nav-ico" style="background:rgba(245,158,11,0.1);color:var(--amber);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Vehicles</span>
+                <span class="mp-nav-sub">2 saved · BCT-2401 is primary</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+            <div class="mp-nav-item" onclick="openSection('settings')">
+              <div class="mp-nav-ico" style="background:rgba(99,102,241,0.1);color:#6366F1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Settings</span>
+                <span class="mp-nav-sub">Profile &amp; account details</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+            <div class="mp-nav-item" onclick="openSection('help')">
+              <div class="mp-nav-ico" style="background:rgba(139,92,246,0.1);color:#8B5CF6;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div class="mp-nav-txt">
+                <span class="mp-nav-title">Help</span>
+                <span class="mp-nav-sub">Support center &amp; contact</span>
+              </div>
+              <svg class="mp-nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /mp-home -->
+
+    </div><!-- /menuPanel -->
+
+    <!-- ═══════════════════════════════════════
+         FULL-SCREEN SECTION PAGES
+         (independent of the menu panel)
+    ═══════════════════════════════════════ -->
+
+    <!-- ACTIVITY -->
+    <div class="sec-page" id="sec-activity">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Activity</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="act-filters" id="actFilters">
+          <button class="act-chip on" data-filter="all" onclick="filterActivity('all',this)">All</button>
+          <button class="act-chip" data-filter="visit" onclick="filterActivity('visit',this)">Visits</button>
+          <button class="act-chip" data-filter="refund" onclick="filterActivity('refund',this)">Refunds</button>
+          <button class="act-chip" data-filter="reservation" onclick="filterActivity('reservation',this)">Reservations</button>
+          <button class="act-chip" data-filter="subscription" onclick="filterActivity('subscription',this)">Subscriptions</button>
+        </div>
+        <div class="act-list" id="actList"></div>
+      </div>
+    </div>
+
+    <!-- PAYMENT -->
+    <div class="sec-page" id="sec-payment">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Payment</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="mp-sec-label">Payment Methods</div>
+        <div class="pm-list" id="pmList">
+          <div class="pm-item primary" onclick="setPrimary('visa4242',this)">
+            <div class="pm-icon-wrap pm-icon-visa">VISA</div>
+            <div class="pm-info"><div class="pm-name">Visa •••• 4242</div><div class="pm-sub">Expires 08 / 27</div></div>
+            <span class="pm-primary-badge">Primary</span>
+            <div class="pm-radio checked" id="radio-visa4242"></div>
+          </div>
+          <div class="pm-item" onclick="setPrimary('apple',this)">
+            <div class="pm-icon-wrap pm-icon-ap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            </div>
+            <div class="pm-info"><div class="pm-name">Apple Pay</div><div class="pm-sub">iPhone · Touch ID</div></div>
+            <div class="pm-radio" id="radio-apple"></div>
+          </div>
+          <div class="pm-item" onclick="setPrimary('mastercard',this)">
+            <div class="pm-icon-wrap" style="background:linear-gradient(135deg,#EB001B,#F79E1B);color:#fff;font-size:10px;font-weight:900;">MC</div>
+            <div class="pm-info"><div class="pm-name">Mastercard •••• 8810</div><div class="pm-sub">Expires 03 / 26</div></div>
+            <div class="pm-radio" id="radio-mastercard"></div>
+          </div>
+        </div>
+        <button class="pm-add-btn" onclick="alert('Add card flow — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Add payment method
+        </button>
+      </div>
+    </div>
+
+    <!-- SUBSCRIPTIONS -->
+    <div class="sec-page" id="sec-subscriptions">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Subscriptions</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+
+        <div class="mp-sec-label">My Passes</div>
+
+        <div class="sub-active-card">
+          <div class="sub-act-hdr">
+            <div>
+              <div class="sub-act-loc">King Kalakaua Plaza</div>
+              <div class="sub-act-addr">2201 Kalakaua Ave, Honolulu, HI · Lot B</div>
+            </div>
+            <div class="sub-act-badge">Active</div>
+          </div>
+          <div class="sub-act-grid">
+            <div class="sub-act-field"><small>Pass Type</small><b>Unreserved Monthly</b></div>
+            <div class="sub-act-field"><small>Monthly Rate</small><b>$250.00 / mo</b></div>
+            <div class="sub-act-field"><small>Started</small><b>Apr 1, 2025</b></div>
+            <div class="sub-act-field"><small>Next Billing</small><b>Jun 1, 2025</b></div>
+            <div class="sub-act-field" style="grid-column:1/-1;"><small>Vehicle</small><b>BCT-2401 · Florida</b></div>
+          </div>
+          <div class="sub-actions">
+            <button class="sub-action-btn sub-action-upgrade" onclick="openSubSheet('upgrade')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+              Upgrade Pass
+            </button>
+            <button class="sub-action-btn sub-action-cancel" onclick="openSubSheet('cancel')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Cancel Pass
+            </button>
+          </div>
+        </div>
+
+        <div class="sub-find-lbl">Find a New Pass</div>
+
+        <div class="sub-search-wrap">
+          <div class="sub-search-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <input class="sub-search" id="subSearchInput" placeholder="Search by address or area…" oninput="filterSubMap(this.value)"/>
+        </div>
+
+        <div class="resolve-map-wrap">
+          <div id="subMap"></div>
+        </div>
+        <div class="map-tip">Tap a <span>Resolve</span> pin to see available passes</div>
+
+      </div>
+
+      <!-- Sheet backdrop -->
+      <div class="sec-sheet-bd" id="subSheetBd" onclick="closeSubSheet()"></div>
+
+      <!-- Location passes sheet -->
+      <div class="sec-sheet" id="subLocSheet">
+        <div class="sec-sheet-handle"></div>
+        <div class="sec-sheet-title" id="subLocName">—</div>
+        <div class="sec-sheet-sub" id="subLocAddr">—</div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;">Available Passes</div>
+        <div class="pass-opt selected" id="passOptUnres" onclick="selectSubPass('unreserved')">
+          <div class="pass-opt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div class="pass-opt-info"><div class="pass-opt-name">Unreserved Monthly</div><div class="pass-opt-desc">Any open spot · first-come basis</div></div>
+          <div class="pass-opt-price">$250</div>
+        </div>
+        <div class="pass-opt" id="passOptRes" onclick="selectSubPass('reserved')">
+          <div class="pass-opt-ico" style="background:rgba(0,165,250,0.1);color:var(--rs-blue);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="pass-opt-info"><div class="pass-opt-name">Reserved Monthly</div><div class="pass-opt-desc">Guaranteed dedicated stall</div></div>
+          <div class="pass-opt-price" style="color:var(--rs-blue);">$300</div>
+        </div>
+        <button class="sheet-action-btn sheet-action-primary" id="subBuyBtn" onclick="alert('Purchase flow — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+          Buy Pass — $250 / mo
+        </button>
+        <button class="sheet-action-btn sheet-action-ghost" onclick="closeSubSheet()">Cancel</button>
+      </div>
+
+      <!-- Upgrade sheet -->
+      <div class="sec-sheet" id="subUpgradeSheet">
+        <div class="sec-sheet-handle"></div>
+        <div class="sec-sheet-title">Upgrade Your Pass</div>
+        <div class="sec-sheet-sub">You're currently on Unreserved Monthly at $250/mo. Upgrading gives you a guaranteed dedicated stall.</div>
+        <div class="pass-opt selected" style="pointer-events:none;">
+          <div class="pass-opt-ico" style="background:rgba(0,165,250,0.1);color:var(--rs-blue);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="pass-opt-info"><div class="pass-opt-name">Reserved Monthly</div><div class="pass-opt-desc">Dedicated stall · King Kalakaua Plaza</div></div>
+          <div class="pass-opt-price" style="color:var(--rs-blue);">$300</div>
+        </div>
+        <div style="background:rgba(0,191,224,0.06);border:1px solid rgba(0,191,224,0.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--text-2);margin-bottom:12px;">Your next billing on <b style="color:var(--text);">Jun 1, 2025</b> will be prorated to <b style="color:var(--text);">$300.00</b>.</div>
+        <button class="sheet-action-btn sheet-action-primary" onclick="alert('Upgrade confirmed — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+          Confirm Upgrade to $300/mo
+        </button>
+        <button class="sheet-action-btn sheet-action-ghost" onclick="closeSubSheet()">Keep current plan</button>
+      </div>
+
+      <!-- Cancel sheet -->
+      <div class="sec-sheet" id="subCancelSheet">
+        <div class="sec-sheet-handle"></div>
+        <div class="sec-sheet-title">Cancel Subscription?</div>
+        <div class="sec-sheet-sub">Your Unreserved Monthly pass at King Kalakaua Plaza will remain active through <b>May 31, 2025</b>, then will not renew.</div>
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--text-2);margin-bottom:12px;">
+          <b style="color:var(--rose);">BCT-2401</b> will lose access to Lot B after May 31.
+        </div>
+        <button class="sheet-action-btn sheet-action-danger" onclick="alert('Cancellation confirmed — coming soon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Yes, Cancel My Pass
+        </button>
+        <button class="sheet-action-btn sheet-action-ghost" onclick="closeSubSheet()">Keep my pass</button>
+      </div>
+
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="sec-page" id="sec-settings">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Settings</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+
+        <div class="mp-sec-label">Profile</div>
+        <div class="settings-card">
+          <div class="sf-row">
+            <span class="sf-label">First</span>
+            <input class="sf-input" type="text" value="Gustavo" placeholder="First name"/>
+          </div>
+          <div class="sf-row">
+            <span class="sf-label">Last</span>
+            <input class="sf-input" type="text" value="" placeholder="Last name"/>
+          </div>
+          <div class="sf-row">
+            <span class="sf-label">Phone</span>
+            <input class="sf-input" type="tel" value="(808) 555-2401" placeholder="Phone number"/>
+          </div>
+        </div>
+
+        <div class="mp-sec-label">Email Addresses</div>
+        <div id="emailList">
+          <div class="email-item">
+            <span class="email-item-addr">gustavo@resolveparking.com</span>
+            <span class="email-item-primary">Primary</span>
+          </div>
+        </div>
+        <button class="add-email-btn" onclick="addEmailRow()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Add email address
+        </button>
+
+        <button class="settings-save-btn" onclick="alert('Settings saved — coming soon')">Save Changes</button>
+
+      </div>
+    </div>
+
+    <!-- VEHICLES -->
+    <div class="sec-page" id="sec-vehicles">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Vehicles</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="mp-sec-label">Your Vehicles</div>
+        <div class="veh-list">
+          <div class="veh-item primary-veh">
+            <div class="veh-plate">BCT-2401</div>
+            <div class="veh-info">
+              <div class="veh-name">Florida · Personal</div>
+              <div class="veh-tags"><span class="veh-tag">1 Active Session</span><span class="veh-tag">1 Subscription</span></div>
+            </div>
+            <div class="veh-actions"><span class="veh-primary-badge">Primary</span><button class="veh-edit-btn">Edit</button></div>
+          </div>
+          <div class="veh-item">
+            <div class="veh-plate" style="font-size:11px;">HI 8SL702</div>
+            <div class="veh-info">
+              <div class="veh-name">Hawaii · Personal</div>
+              <div class="veh-tags"><span class="veh-tag">No Active Session</span></div>
+            </div>
+            <div class="veh-actions">
+              <button class="veh-edit-btn">Edit</button>
+              <button class="veh-edit-btn" style="color:var(--rose);">Remove</button>
+            </div>
+          </div>
+        </div>
+        <button class="veh-add-btn" style="margin-top:10px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Add a vehicle
+        </button>
+      </div>
+    </div>
+
+    <!-- HELP -->
+    <div class="sec-page" id="sec-help">
+      <div class="sec-hdr">
+        <div class="sec-hdr-row">
+          <button class="sec-back" onclick="backToMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="sec-title">Help</div>
+          <button class="sec-ham" onclick="backToMenu()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="help-card">
+          <div class="help-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div class="help-title">Resolve Help Center</div>
+          <div class="help-sub">Get answers to billing questions, session issues, subscription management, and more.</div>
+          <a class="help-btn" href="https://www.resolveparking.com/help" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Open Help Center
+          </a>
+          <div class="help-note">Full content and live chat coming soon</div>
+        </div>
+        <div style="margin-top:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:13px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border);">
+            <div style="width:32px;height:32px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.86 13 19.79 19.79 0 0 1 1.82 4.16 2 2 0 0 1 3.8 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91A16 16 0 0 0 13 14.09l.91-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 15.16z"/></svg></div>
+            <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text);">Call Support</div><div style="font-size:11px;color:var(--text-3);">(808) 555-0100</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);"><polyline points="9 6 15 12 9 18"/></svg>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;">
+            <div style="width:32px;height:32px;border-radius:9px;background:rgba(0,191,224,0.08);color:var(--rs-cyan);display:grid;place-items:center;flex-shrink:0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--text);">Email Support</div><div style="font-size:11px;color:var(--text-3);">support@resolveparking.com</div></div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);"><polyline points="9 6 15 12 9 18"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen-wrap -->
+</div><!-- /device -->
+</div><!-- /device-outer -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Rate configs ──
+const RATES = {
+  standard: { perHrMs: 60*60*1000, perHr: 8.00, max: 80.00, capMs: 10*60*60*1000, flat: false },
+  '24hr':   { flat: true, flatAmt: 75.00 }
+};
+const TX_FEE = 1.50;
+let currentPtype = 'standard';
+
+// ── Mock data ──
+const activityData = [
+  { type:'visit', date:'May 8, 2025', timeIn:'10:30 AM', timeOut:'2:15 PM', amount:34.50, location:'King Kalakaua Plaza', address:'2201 Kalakaua Ave, Honolulu, HI', vehicle:'BCT-2401' },
+  { type:'reservation', date:'May 2, 2025', timeIn:'9:00 AM', timeOut:'1:00 PM', amount:33.50, location:'King Kalakaua Plaza', address:'2201 Kalakaua Ave, Honolulu, HI', vehicle:'BCT-2401' },
+  { type:'visit', date:'Apr 28, 2025', timeIn:'7:00 AM', timeOut:'5:45 PM', amount:81.50, location:'Ala Moana Center', address:'1450 Ala Moana Blvd, Honolulu, HI', vehicle:'BCT-2401' },
+  { type:'refund', date:'Apr 21, 2025', timeIn:'9:15 AM', timeOut:'9:22 AM', amount:-1.50, location:'Waikiki Trade Center', address:'2255 Kuhio Ave, Honolulu, HI', vehicle:'HI 8SL702' },
+  { type:'subscription', date:'Apr 1, 2025', timeIn:'—', timeOut:'—', amount:250.00, location:'King Kalakaua Plaza', address:'2201 Kalakaua Ave, Honolulu, HI', vehicle:'BCT-2401' },
+  { type:'visit', date:'Mar 15, 2025', timeIn:'8:00 AM', timeOut:'12:30 PM', amount:41.50, location:'Bishop Square', address:'777 Bishop St, Honolulu, HI', vehicle:'HI 8SL702' },
+  { type:'subscription', date:'Mar 1, 2025', timeIn:'—', timeOut:'—', amount:250.00, location:'King Kalakaua Plaza', address:'2201 Kalakaua Ave, Honolulu, HI', vehicle:'BCT-2401' },
+];
+
+
+// ── Plate sync ──
+function syncPlate(){
+  const val = (document.getElementById('plateInput')?.value || 'BCT-2401').trim();
+  const sp = document.getElementById('sessPlate');
+  if(sp) sp.textContent = val || 'BCT-2401';
+}
+
+function selectVtype(el){
+  document.querySelectorAll('.vtype-card').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+}
+function selectPtype(el){
+  document.querySelectorAll('.ptype-card').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  currentPtype = el.dataset.p;
+  updateRateUI();
+}
+function updateRateUI(){
+  const is24 = currentPtype === '24hr';
+  const rateAmt = document.getElementById('sessRateAmt');
+  const rateCap = document.getElementById('sessRateCap');
+  if(rateAmt) rateAmt.textContent = is24 ? '$75.00 flat' : '$8.00 / hr';
+  if(rateCap) rateCap.textContent = is24 ? 'Unlimited in/out' : '$80.00 daily max';
+  const rcSub = document.getElementById('rateChartSub');
+  if(rcSub) rcSub.textContent = is24 ? '$75.00 flat · 24hr access' : '$8.00/hr · $80.00 daily max';
+  const rsSub = document.getElementById('rateSheetSub');
+  if(rsSub) rsSub.innerHTML = is24
+    ? 'King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$75.00 flat</b> for a full 24-hour period'
+    : 'King Kalakaua Plaza · Lot B — <b style="color:var(--text)">$8.00 per hour</b>, capped at <b style="color:var(--text)">$80.00 / day</b>';
+}
+
+function showVToast(){
+  const t=document.getElementById('vToast');
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+}
+
+let cardRevealed=false;
+document.getElementById('cardNum')?.addEventListener('input',e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,16);
+  e.target.value=v.replace(/(\d{4})(?=\d)/g,'$1 ');
+});
+document.getElementById('cardExp')?.addEventListener('input',e=>{
+  let v=e.target.value.replace(/\D/g,'').slice(0,4);
+  if(v.length>=3) v=v.slice(0,2)+' / '+v.slice(2);
+  e.target.value=v;
+});
+
+function handlePayBtn(){
+  if(!document.querySelector('.vtype-card.on')){showVToast();return;}
+  if(!cardRevealed){
+    document.getElementById('cardReveal').classList.add('show');
+    document.getElementById('payBtnTxt').textContent='Confirm payment';
+    cardRevealed=true;
+    document.getElementById('cardReveal').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  startPay('Card');
+}
+
+let sessionStart=null, sessionActive=false, ticker=null, payMethod='';
+
+function startPay(method){
+  if(!document.querySelector('.vtype-card.on')){showVToast();return;}
+  payMethod=method;
+  const overlay=document.getElementById('payOverlay');
+  document.getElementById('overlayTitle').textContent=method==='Card'?'Processing payment':`Authorizing ${method}`;
+  document.getElementById('overlaySub').textContent='Securely contacting your bank…';
+  overlay.classList.add('show');
+  setTimeout(()=>{
+    document.getElementById('overlayContent').innerHTML='<div class="success-ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+    document.getElementById('overlayTitle').textContent='Payment confirmed';
+    document.getElementById('overlaySub').textContent='Starting your parking session…';
+  },1400);
+  setTimeout(()=>{overlay.classList.remove('show');launchSession();},2500);
+}
+
+function pad(n){return String(n).padStart(2,'0');}
+function fmtClock(d){let h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12||12;return `${h}:${pad(m)} ${ap}`;}
+function fmtDate(d){const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `${mo[d.getMonth()]} ${d.getDate()}`;}
+
+function calcAccrued(ms){
+  if(currentPtype==='24hr') return 75.00;
+  const R=RATES.standard;
+  if(ms<=0) return 0;
+  const hrs=ms/R.perHrMs;
+  return Math.min(hrs*R.perHr, R.max);
+}
+
+function launchSession(){
+  document.getElementById('payForm').style.display='none';
+  const sv=document.getElementById('sessionView');
+  sv.classList.add('show');
+  document.getElementById('scroller').scrollTo({top:0,behavior:'smooth'});
+
+  const now=new Date();
+  sessionStart=new Date(now.getTime()-(12*60+10)*1000);
+  sessionActive=true;
+
+  document.getElementById('sessStartTime').textContent=fmtClock(sessionStart);
+  document.getElementById('sessStartDate').textContent=fmtDate(sessionStart);
+  document.getElementById('dEntryTime').textContent=fmtClock(sessionStart);
+  document.getElementById('dEntryDate').textContent=fmtDate(sessionStart);
+  document.getElementById('dPayMethod').textContent=payMethod;
+
+  syncPlate();
+  const vtCard=document.querySelector('.vtype-card.on');
+  const vtype=vtCard?vtCard.dataset.v:'personal';
+  const vtag=document.getElementById('sessVtypeTag');
+  if(vtag) vtag.textContent=vtype.charAt(0).toUpperCase()+vtype.slice(1);
+
+  tick(); if(ticker) clearInterval(ticker);
+  ticker=setInterval(tick,1000);
+}
+
+const RING_DASH=584.34;
+function getRingFrac(elapsed){
+  if(currentPtype==='24hr') return Math.min(elapsed/(24*60*60*1000),1);
+  return Math.min(elapsed/RATES.standard.capMs,1);
+}
+function tick(){
+  if(!sessionStart||!sessionActive) return;
+  const elapsed=new Date()-sessionStart;
+  const sec=Math.floor(elapsed/1000);
+  document.getElementById('tH').textContent=pad(Math.floor(sec/3600));
+  document.getElementById('tM').textContent=pad(Math.floor((sec%3600)/60));
+  document.getElementById('tS').textContent=pad(sec%60);
+  const parking=calcAccrued(elapsed);
+  const total=parking+TX_FEE;
+  const is24hr=currentPtype==='24hr';
+  const totalDisplay=is24hr?'$76.50 flat':'$'+total.toFixed(2)+' so far';
+  document.getElementById('ringPriceTxt').textContent=totalDisplay;
+  document.getElementById('ringPrice').style.color='var(--rs-teal)';
+  document.getElementById('dTotal').textContent='$'+total.toFixed(2);
+  const frac=getRingFrac(elapsed);
+  const prog=document.getElementById('tProg');
+  if(prog) prog.style.strokeDashoffset=String(RING_DASH*(1-frac));
+}
+
+function buildRateTable(elapsedMs){
+  if(currentPtype==='24hr'){
+    return `
+      <div class="rate-trow"><span class="rd">Flat day rate</span><span class="rp">$75.00</span></div>
+      <div class="rate-trow"><span class="rd">In/out access</span><span class="rp" style="color:var(--success)">Included</span></div>
+      <div class="rate-trow rmax"><span class="rd">Valid for</span><span class="rp">24 hours</span></div>
+      <div class="rate-trow rfee"><span class="rd">Transaction fee (applied to total only)</span><span class="rp">+ $1.50</span></div>`;
+  }
+  const rows=[];
+  for(let i=1;i<=10;i++) rows.push({hrs:i,price:Math.min(i*8,80)});
+  rows.push({cap:true});
+  const curHr=elapsedMs?Math.ceil(elapsedMs/(60*60*1000)):null;
+  let html = rows.map(r=>{
+    if(r.cap) return `<div class="rate-trow rmax"><span class="rd">After 10 hrs · daily max</span><span class="rp">$80.00</span></div>`;
+    const isCur=curHr&&r.hrs===curHr;
+    const dur=r.hrs===1?'1 hour':`${r.hrs} hours`;
+    return `<div class="rate-trow ${isCur?'rcur':''}"><span class="rd">${isCur?'<span class="now-lbl">NOW</span>':''}${dur}</span><span class="rp">$${r.price.toFixed(2)}</span></div>`;
+  }).join('');
+  html += `<div class="rate-trow rfee"><span class="rd">Transaction fee (applied to total only)</span><span class="rp">+ $1.50</span></div>`;
+  return html;
+}
+
+function openRate(){
+  document.getElementById('rateTable').innerHTML=buildRateTable(sessionStart?new Date()-sessionStart:null);
+  document.getElementById('rateBackdrop').classList.add('show');
+  document.getElementById('rateSheet').classList.add('show');
+}
+function closeRate(){
+  document.getElementById('rateBackdrop').classList.remove('show');
+  document.getElementById('rateSheet').classList.remove('show');
+}
+document.getElementById('rateTable').innerHTML=buildRateTable(null);
+
+// ═══════════════════════════════════════
+// MENU PANEL — NAV STACK
+// ═══════════════════════════════════════
+
+const SECTION_TITLES = {
+  activity:      'Activity',
+  payment:       'Payment',
+  subscriptions: 'Subscriptions',
+  vehicles:      'Vehicles',
+  settings:      'Settings',
+  help:          'Help'
+};
+
+const resolveLocations = [
+  { name:'374 Kalaimoku St Garage', address:'374 Kalaimoku St, Honolulu, HI 96815', lat:21.2795, lng:-157.8282 },
+  { name:'King Kalakaua Plaza', address:'2201 Kalakaua Ave, Honolulu, HI 96815', lat:21.2764, lng:-157.8293 },
+  { name:'Ala Moana Center', address:'1450 Ala Moana Blvd, Honolulu, HI 96814', lat:21.2835, lng:-157.8431 },
+  { name:'Waikiki Trade Center', address:'2255 Kuhio Ave, Honolulu, HI 96815', lat:21.2780, lng:-157.8246 },
+];
+
+let subMap = null, subMapInit = false;
+
+function openMenu(){
+  document.getElementById('menuPanel').classList.add('open');
+  document.getElementById('menuOverlay').classList.add('show');
+  renderActivity('all');
+}
+
+function closeMenu(){
+  document.querySelectorAll('.sec-page').forEach(p => p.classList.remove('open'));
+  document.getElementById('menuPanel').classList.remove('open');
+  document.getElementById('menuOverlay').classList.remove('show');
+}
+
+function openSection(id){
+  document.getElementById('menuPanel').classList.remove('open');
+  document.getElementById('menuOverlay').classList.remove('show');
+  document.querySelectorAll('.sec-page').forEach(p => p.classList.remove('open'));
+  const page = document.getElementById('sec-'+id);
+  if(page) page.classList.add('open');
+  const body = page?.querySelector('.sec-body');
+  if(body) body.scrollTop = 0;
+  if(id === 'subscriptions'){
+    setTimeout(()=>{ initSubMap(); if(subMap) subMap.invalidateSize(); }, 200);
+  }
+}
+
+function backToMenu(){
+  closeSubSheet();
+  document.querySelectorAll('.sec-page').forEach(p => p.classList.remove('open'));
+  document.getElementById('menuPanel').classList.add('open');
+  document.getElementById('menuOverlay').classList.add('show');
+}
+
+// ── ACTIVITY ──
+function filterActivity(filter, el){
+  document.querySelectorAll('.act-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderActivity(filter);
+}
+
+function renderActivity(filter){
+  const list = document.getElementById('actList');
+  if(!list) return;
+  const items = filter==='all' ? activityData : activityData.filter(i=>i.type===filter);
+  if(!items.length){
+    list.innerHTML='<div style="text-align:center;padding:28px 0;color:var(--text-3);font-size:13px;font-weight:600;">No records found</div>';
+    return;
+  }
+  list.innerHTML = items.map(buildActivityItem).join('');
+}
+
+// ── SUBSCRIPTION MAP ──
+function initSubMap(){
+  if(subMapInit) return;
+  subMapInit = true;
+  subMap = L.map('subMap',{ center:[21.2795,-157.8282], zoom:14, zoomControl:false, attributionControl:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19 }).addTo(subMap);
+  resolveLocations.forEach(loc=>{
+    const iconHtml = `<div style="width:30px;height:30px;background:linear-gradient(135deg,#00FB94,#00D0C7,#00A5FA);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-family:Outfit,sans-serif;font-size:11px;font-weight:900;color:#022818;">R</span></div>`;
+    L.divIcon({ className:'', html:iconHtml, iconSize:[30,30], iconAnchor:[9,30] });
+    L.marker([loc.lat, loc.lng], { icon: L.divIcon({ className:'', html:iconHtml, iconSize:[30,30], iconAnchor:[9,30] }) })
+      .addTo(subMap)
+      .on('click', ()=>openLocPassSheet(loc));
+  });
+}
+
+function filterSubMap(q){
+  if(!subMap||!q.trim()) return;
+  const m = resolveLocations.find(l=>l.name.toLowerCase().includes(q.toLowerCase())||l.address.toLowerCase().includes(q.toLowerCase()));
+  if(m) subMap.flyTo([m.lat, m.lng], 16, {duration:1});
+}
+
+// ── SUBSCRIPTION SHEETS ──
+let selectedSubPass = 'unreserved';
+
+function openLocPassSheet(loc){
+  document.getElementById('subLocName').textContent = loc.name;
+  document.getElementById('subLocAddr').textContent = loc.address;
+  selectedSubPass = 'unreserved';
+  document.getElementById('passOptUnres').classList.add('selected');
+  document.getElementById('passOptRes').classList.remove('selected');
+  document.getElementById('subBuyBtn').textContent = 'Buy Pass — $250 / mo';
+  showSubSheet('subLocSheet');
+}
+
+function selectSubPass(type){
+  selectedSubPass = type;
+  document.getElementById('passOptUnres').classList.toggle('selected', type==='unreserved');
+  document.getElementById('passOptRes').classList.toggle('selected', type==='reserved');
+  document.getElementById('subBuyBtn').textContent = type==='unreserved' ? 'Buy Pass — $250 / mo' : 'Buy Pass — $300 / mo';
+}
+
+function openSubSheet(type){
+  if(type==='cancel') showSubSheet('subCancelSheet');
+  else if(type==='upgrade') showSubSheet('subUpgradeSheet');
+}
+
+function showSubSheet(id){
+  document.getElementById('subSheetBd').classList.add('show');
+  // hide all sheets first
+  ['subLocSheet','subUpgradeSheet','subCancelSheet'].forEach(s=>{
+    document.getElementById(s)?.classList.remove('show');
+  });
+  document.getElementById(id)?.classList.add('show');
+}
+
+function closeSubSheet(){
+  document.getElementById('subSheetBd').classList.remove('show');
+  ['subLocSheet','subUpgradeSheet','subCancelSheet'].forEach(s=>{
+    document.getElementById(s)?.classList.remove('show');
+  });
+}
+
+// ── SETTINGS ──
+function addEmailRow(){
+  const addr = prompt('Enter email address:');
+  if(!addr || !addr.includes('@')) return;
+  const list = document.getElementById('emailList');
+  const row = document.createElement('div');
+  row.className = 'email-item';
+  row.innerHTML = `<span class="email-item-addr">${addr}</span><button class="email-remove-btn" onclick="this.parentElement.remove()">Remove</button>`;
+  list.appendChild(row);
+}
+
+function buildActivityItem(item){
+  const isRefund = item.type==='refund';
+  const amtStr = isRefund
+    ? '–$'+Math.abs(item.amount).toFixed(2)
+    : '$'+item.amount.toFixed(2);
+  const amtClass = isRefund ? 'neg' : 'pos';
+  const typeLabels = {visit:'Visit',refund:'Refund',reservation:'Reservation',subscription:'Subscription'};
+  return `
+  <div class="act-item">
+    <div class="act-item-hdr">
+      <div class="act-type-dot ${item.type}"></div>
+      <span class="act-type-lbl ${item.type}">${typeLabels[item.type]||item.type}</span>
+      <span class="act-date">${item.date}</span>
+      <span class="act-amount ${amtClass}">${amtStr}</span>
+    </div>
+    <div class="act-item-body">
+      <div class="act-field"><small>Time In</small><b>${item.timeIn}</b></div>
+      <div class="act-field"><small>Time Out</small><b>${item.timeOut}</b></div>
+      <div class="act-field full">
+        <small>Location</small>
+        <b>${item.location}</b>
+        <div style="font-size:10.5px;color:var(--text-3);margin-top:1px;">${item.address}</div>
+      </div>
+      <div class="act-field"><small>Vehicle</small><div class="act-plate-tag">${item.vehicle}</div></div>
+    </div>
+  </div>`;
+}
+
+// ── PAYMENT ──
+let primaryPayment = 'visa4242';
+function setPrimary(id, itemEl){
+  primaryPayment = id;
+  document.querySelectorAll('.pm-item').forEach(el=>{
+    el.classList.remove('primary');
+    el.querySelector('.pm-primary-badge')?.remove();
+    const radio = el.querySelector('.pm-radio');
+    if(radio) radio.classList.remove('checked');
+  });
+  itemEl.classList.add('primary');
+  const radio = document.getElementById('radio-'+id);
+  if(radio) radio.classList.add('checked');
+  const badgeExist = itemEl.querySelector('.pm-primary-badge');
+  if(!badgeExist){
+    const badge = document.createElement('span');
+    badge.className = 'pm-primary-badge';
+    badge.textContent = 'Primary';
+    const radioEl = itemEl.querySelector('.pm-radio');
+    if(radioEl) itemEl.insertBefore(badge, radioEl);
+  }
+}
+</script>
+</body>
+</html>
