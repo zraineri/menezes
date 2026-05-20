@@ -1,0 +1,2525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Parkwell — Scan to Pay</title>
+<style>
+  :root{
+    --bg:#0c0f12; --bg-2:#11161b;
+    --panel:#151b22; --panel-2:#1a2129;
+    --border:#232c36; --border-soft:#1c242d;
+    --muted:#8a95a1; --text:#e6edf3; --text-dim:#b6bfca;
+    /* Parkwell brand — dark navy theme with white logo */
+    --pr-navy:#2A5D7C; --pr-navy-2:#4A8FB8;
+    --pr-gold:#7BB8DC; --pr-gold-2:#A8D4ED;
+    /* Parkwell palette — wide-spread blue ramp for clear surface hierarchy */
+    --pw-deep-1:#03091A;  /* page bg — nearly black-navy (was #0A1628) */
+    --pw-deep-2:#0B1E3D;  /* screen bg — clearly bluer (was #0F2240) */
+    --pw-deep-3:#15396B;  /* field/panel bg — noticeably lighter (was #142B4F) */
+    --pw-deep-4:#235693;  /* raised/hover — clearly distinct (was #1A3563) */
+    --pw-deep-5:#3170B8;  /* extra-elevated highlight surfaces */
+    --pw-border:#2A5D9F;  /* dividers — brighter so panels separate cleanly */
+    --pw-border-soft:#1A3768;
+    --pw-brand:#2A5D7C;   /* logo blue */
+    --pw-brand-light:#4A8FB8;
+    --pw-brand-glow:#7BB8DC;
+    --pw-text:#EAF3FB;
+    --pw-text-dim:#A6BDD6;  /* slightly lighter so it pops on brighter panels */
+    --pw-text-faint:#7088A8;
+    /* Repoint accent tokens to brand */
+    --green:#2A5D7C; --green-2:#4A8FB8;
+    --teal:#4A8FB8; --teal-2:#7BB8DC; --cyan:#7BB8DC;
+    --amber:#7BB8DC; --rose:#ef4444;
+    /* Pay button gradient: brand-blue ramp */
+    --ai-grad: linear-gradient(135deg, #2A5D7C 0%, #4A8FB8 50%, #7BB8DC 100%);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#06090c;color:var(--text);font-family:-apple-system,Inter,ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  body{
+    background:radial-gradient(1100px 500px at 85% -10%, rgba(254,80,0,.10), transparent 60%),
+               radial-gradient(900px 500px at -5% 110%, rgba(0,94,184,.08), transparent 60%),
+               #f4f7fb;
+    min-height:100vh;padding:24px 14px 60px;display:flex;justify-content:center;
+  }
+
+  /* Phone frame */
+  .device{
+    width:390px;max-width:100%;background:#000;border-radius:44px;padding:10px;
+    box-shadow:0 0 0 1.5px #1f2630, 0 30px 80px -20px rgba(0,0,0,.85), 0 0 100px -20px rgba(254,80,0,.18);
+    position:relative;
+  }
+  .screen{background:#000;border-radius:36px;overflow:hidden;position:relative;height:830px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .screen::-webkit-scrollbar{width:0}
+  .status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0;color:#fff;font-size:13px;font-weight:600;background:#000;position:relative;z-index:2}
+  .status-bar .time{font-size:15px;font-feature-settings:"tnum"}
+  .status-bar .right{display:flex;align-items:center;gap:5px;font-size:11px}
+  .status-bar .battery{width:24px;height:11px;border:1.2px solid #fff;border-radius:3px;position:relative;padding:1px}
+  .status-bar .battery::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:#fff;border-radius:0 1px 1px 0}
+  .status-bar .battery .lvl{width:60%;height:100%;background:#FE5000;border-radius:1px}
+  .notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:120px;height:30px;background:#000;border-radius:20px;z-index:3}
+  .home-ind{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;width:135px;height:5px;background:#fff;border-radius:3px;opacity:.85;z-index:3}
+
+  /* App content */
+  .app{padding:0 16px 100px}
+
+  .header{display:flex;align-items:center;justify-content:space-between;padding:12px 4px 18px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .mark{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;box-shadow:0 8px 20px -10px rgba(0,94,184,.5);overflow:hidden}
+  .pw-mark{width:38px;height:38px;display:block;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(123,184,220,.35))}
+  .brand .name{font-weight:800;font-size:15px;color:#f1f5f9;line-height:1.1;letter-spacing:-.005em}
+  .brand .name .pr-park{color:#f1f5f9}
+  .brand .name .pr-river{color:var(--pr-gold)}
+  .brand small{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;font-weight:700;margin-top:2px}
+  .header .icon-btn{width:38px;height:38px;border-radius:50%;background:#181d24;border:1px solid #232c36;display:grid;place-items:center;color:var(--text-dim);cursor:pointer}
+  .header .icon-btn svg{width:16px;height:16px}
+
+  /* Lot card */
+  .lot-card{background:#10161d;border:1px solid #1f2832;border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start}
+  .lot-card .pin{width:46px;height:46px;border-radius:12px;flex-shrink:0;background:#0e141b;border:1px solid #1f2832;display:grid;place-items:center;color:var(--teal-2)}
+  .lot-card .pin svg{width:22px;height:22px}
+  .lot-card .info{flex:1;min-width:0}
+  .lot-card h1{margin:0 0 4px;font-size:18px;font-weight:700;color:#fff;line-height:1.2}
+  .lot-card .addr{color:var(--text-dim);font-size:12.5px;line-height:1.4}
+
+  /* Section labels */
+  .field-block{margin-top:18px}
+  .field-block .lbl{display:flex;align-items:center;gap:6px;font-size:14.5px;font-weight:700;color:#fff;margin-bottom:8px}
+  .field-block .lbl .req{color:var(--rose);font-size:13px}
+
+  /* Plate field */
+  .plate-card{background:#10161d;border:1px solid #1f2832;border-radius:14px;padding:5px;display:grid;grid-template-columns:88px 1fr 56px;align-items:center}
+  .plate-card .state{background:transparent;border:0;color:#fff;padding:14px 12px;font-family:inherit;font-size:17px;font-weight:600;cursor:pointer;border-right:1px solid #1f2832;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .plate-card .state::after{content:"⌄";color:var(--muted);font-size:14px;line-height:1}
+  .plate-card .plate-input{background:transparent;border:0;color:#fff;padding:14px;font-family:inherit;font-size:22px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;outline:none;width:100%;text-align:center}
+  .plate-card .plate-input::placeholder{color:#3d4856;letter-spacing:.18em;font-weight:600}
+  .plate-card .scan-btn{width:46px;height:46px;border-radius:10px;background:transparent;border:1.4px solid #2a3340;color:#fff;cursor:pointer;display:grid;place-items:center;margin-right:6px}
+  .plate-card .scan-btn:hover{background:#1a2129}
+  .plate-card .scan-btn svg{width:22px;height:22px}
+
+  /* Phone */
+  .phone-card{background:#10161d;border:1px solid #1f2832;border-radius:14px;display:flex;align-items:center;overflow:hidden}
+  .phone-card .country{background:transparent;border:0;padding:14px 12px;border-right:1px solid #1f2832;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;font-size:14px;color:#fff}
+  .phone-card .country .flag{font-size:18px;line-height:1}
+  .phone-card .country::after{content:"⌄";color:var(--muted);font-size:13px;line-height:1}
+  .phone-card input{flex:1;background:transparent;border:0;color:#fff;padding:14px 12px;font-family:inherit;font-size:15px;font-weight:500;outline:none}
+  .phone-card input::placeholder{color:#5b6877}
+
+  /* Duration card with slider */
+  .dur-section{margin-top:22px}
+  .dur-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .dur-head h3{margin:0;font-size:15.5px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+  .dur-head h3 .req{color:var(--rose);font-size:13px}
+  .dur-head .pricetag{font-size:24px;font-weight:800;color:var(--teal-2);letter-spacing:-.01em;font-feature-settings:"tnum";text-align:right}
+  .dur-head .pricetag.free{color:#16a34a;font-size:22px;letter-spacing:.02em}
+
+  .dur-card{background:linear-gradient(180deg,#10161d,#0c1218);border:1px solid #1f2832;border-radius:18px;padding:18px 18px 22px;position:relative;overflow:hidden}
+  .dur-display{text-align:center;padding:6px 0 18px}
+  .dur-display .big{font-size:38px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1;font-feature-settings:"tnum"}
+  .dur-display .lbl{font-size:11.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:6px}
+  .dur-display .ends{font-size:11.5px;color:var(--text-dim);margin-top:5px}
+  .dur-display .ends b{color:#fff;font-weight:600}
+
+  /* Slider */
+  .slider-wrap{position:relative;padding:8px 4px 4px}
+  .slider-track{position:relative;height:38px}
+  .slider-rail{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:6px;border-radius:3px;background:#1a232c;overflow:hidden}
+  .slider-fill{position:absolute;left:0;top:0;bottom:0;background:var(--ai-grad);border-radius:3px;transition:width .12s}
+  /* Free zone overlay sits BEHIND the fill — covers the 0-30min portion of the rail */
+  .free-zone{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:3px;background:repeating-linear-gradient(45deg,rgba(34,197,94,.45) 0,rgba(34,197,94,.45) 4px,rgba(34,197,94,.25) 4px,rgba(34,197,94,.25) 8px);pointer-events:none;z-index:1}
+  .slider-ticks{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:14px;pointer-events:none;z-index:2}
+  .slider-ticks .tick{position:absolute;top:50%;transform:translate(-50%,-50%);width:2px;height:10px;border-radius:1px;background:#2a3340}
+  .slider-ticks .tick.major{height:14px;background:#3a4654}
+  .slider-ticks .tick.boundary{height:18px;width:3px;background:var(--pr-gold);border-radius:2px;box-shadow:0 0 6px rgba(254,80,0,.6)}
+  /* When in free mode, the slider thumb gets a green ring */
+  .slider-wrap.free-mode input[type=range].slider::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(34,197,94,.18), 0 4px 14px rgba(0,0,0,.45), inset 0 0 0 6px #22c55e}
+  .slider-wrap.free-mode input[type=range].slider::-moz-range-thumb{box-shadow:0 0 0 4px rgba(34,197,94,.18), 0 4px 14px rgba(0,0,0,.45), inset 0 0 0 6px #22c55e}
+  .slider-wrap.free-mode .slider-fill{background:linear-gradient(90deg,#22c55e,#16a34a)}
+  input[type=range].slider{-webkit-appearance:none;appearance:none;position:absolute;left:-2px;right:-2px;top:0;width:calc(100% + 4px);height:38px;background:transparent;outline:none;cursor:grab;margin:0;z-index:3}
+  input[type=range].slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 4px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.45), inset 0 0 0 6px var(--teal-2)}
+  input[type=range].slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 4px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.45), inset 0 0 0 6px var(--teal-2);cursor:grab}
+  .slider-labels{display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--muted);font-weight:600}
+  .slider-labels span:first-child{color:#22c55e;font-weight:800}
+
+  /* Quick chips */
+  .quick-chips{display:flex;gap:6px;margin-top:18px;overflow-x:visible;scrollbar-width:none;align-items:flex-end}
+  .quick-chips::-webkit-scrollbar{display:none}
+  .chip{background:#10161d;border:1px solid #1f2832;color:var(--text-dim);font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.12s}
+  .chip:hover{background:#1a2129;color:#fff}
+  .chip.on{background:rgba(0,115,216,.10);border-color:rgba(0,115,216,.45);color:var(--teal-2)}
+  /* Chip wrap with FREE pill above the 30-min chip */
+  .chip-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+  .free-pill{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:8.5px;font-weight:800;letter-spacing:.10em;padding:2px 8px;border-radius:999px;box-shadow:0 3px 8px -2px rgba(34,197,94,.5);z-index:2;pointer-events:none;white-space:nowrap}
+
+  /* Promo */
+  .promo{margin-top:18px}
+  .promo .sublabel{font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:8px}
+  .promo .sublabel .opt{color:var(--muted);font-weight:500}
+  .promo-card{background:#10161d;border:1px solid #1f2832;border-radius:14px;padding:4px 4px 4px 14px;display:flex;align-items:center;gap:8px}
+  .promo-card input{flex:1;background:transparent;border:0;outline:0;color:#fff;font-family:inherit;font-size:14px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:14px 4px}
+  .promo-card input::placeholder{color:#5b6877;font-weight:500;letter-spacing:.04em;text-transform:none}
+  .promo-card button{background:#1a232c;border:0;color:#fff;padding:10px 16px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .promo-card button:hover{background:#222d38}
+  .promo-card button.applied{background:var(--green);color:#07130b;font-weight:700}
+  .promo-msg{font-size:12px;margin-top:8px;display:none;align-items:center;gap:6px}
+  .promo-msg.show{display:flex}
+  .promo-msg.ok{color:#86efac}
+  .promo-msg.err{color:#fca5a5}
+
+  /* Receipt */
+  .receipt{margin-top:22px;padding:16px 0 0;border-top:1px dashed #1a232c}
+  .receipt.free{display:none}
+  .rrow{display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px;color:var(--text-dim)}
+  .rrow.total{font-size:18px;font-weight:800;color:#fff;padding-top:12px;margin-top:6px;border-top:1px solid #1a232c}
+  .rrow.discount{color:#86efac}
+
+  /* Wallet pay buttons (Apple Pay / Google Pay) */
+  .wallet-row{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .wallet-btn{
+    border:0;border-radius:14px;height:54px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-family:inherit;transition:transform .12s, opacity .15s;
+  }
+  .wallet-btn:active{transform:scale(0.98)}
+  .wallet-btn:disabled{opacity:.4;cursor:not-allowed}
+  .wallet-btn.apple{background:#000;border:1.5px solid #fff;color:#fff;font-weight:600;font-size:15px}
+  .wallet-btn.apple .applepay-mark{display:flex;align-items:center;font-size:18px;font-weight:600;letter-spacing:-.02em}
+  .wallet-btn.apple .applepay-mark .apple-logo{margin-right:4px;font-size:18px}
+  .wallet-btn.google{background:#fff;color:#3c4043;font-weight:600;font-size:13.5px}
+  .wallet-btn.google .gp-mark{display:flex;align-items:center;font-weight:500;letter-spacing:0}
+  .wallet-btn.google .g-blue{color:#4285F4}
+  .wallet-btn.google .g-red{color:#EA4335}
+  .wallet-btn.google .g-yellow{color:#FBBC04}
+  .wallet-btn.google .g-green{color:#34A853}
+
+  .or-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+  .or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:#1a232c}
+
+  /* Main pay button */
+  .pay{
+    width:100%;padding:18px;border-radius:16px;
+    background:var(--ai-grad);color:#000;border:0;
+    font-weight:800;font-size:16px;font-family:inherit;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 14px 34px -12px rgba(45,212,191,.7);
+    transition:transform .12s, opacity .2s;
+  }
+  .pay:hover{transform:translateY(-1px)}
+  .pay:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+  .pay svg{width:18px;height:18px}
+
+  .secure-note{text-align:center;margin-top:10px;color:var(--muted);font-size:11px;display:flex;align-items:center;justify-content:center;gap:5px}
+  .secure-note svg{width:11px;height:11px}
+
+  /* Outside-device URL bar */
+  .preview-bar{max-width:390px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 12px;font-size:11.5px;color:var(--muted)}
+  .preview-bar .url{flex:1;background:#0e141b;border-radius:8px;padding:6px 10px;font-family:ui-monospace,monospace;font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Scan modal */
+  .scan-modal{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:20;padding:20px;flex-direction:column;gap:14px;border-radius:36px}
+  .scan-modal.show{display:flex}
+  .scan-modal .frame{width:240px;height:140px;border:2px solid var(--teal-2);border-radius:14px;position:relative;overflow:hidden;background:linear-gradient(180deg,#0a1218,#06090c)}
+  .scan-modal .scan-line{position:absolute;left:0;right:0;height:2px;background:var(--teal-2);box-shadow:0 0 12px var(--teal-2);animation:scanline 1.6s ease-in-out infinite}
+  @keyframes scanline{0%,100%{top:8%}50%{top:88%}}
+  .scan-modal h3{margin:0;color:#fff;font-size:16px;font-weight:700}
+  .scan-modal p{margin:0;color:var(--text-dim);font-size:12.5px;text-align:center;max-width:260px;line-height:1.5}
+  .scan-modal .cancel{background:#1a232c;border:0;color:#fff;padding:10px 22px;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit}
+
+  /* ============================================================
+     LIGHT THEME — applies when body has data-theme="light"
+     White screen, light grey field fills, dark text. Brand teal/green stays.
+     ============================================================ */
+  body[data-theme="light"]{
+    background:radial-gradient(1100px 500px at 85% -10%, rgba(254,80,0,.08), transparent 60%),
+               radial-gradient(900px 500px at -5% 110%, rgba(0,94,184,.06), transparent 60%),
+               #eef3f9;
+  }
+  body[data-theme="light"] .device{
+    background:#cdd5dd;
+    box-shadow:0 0 0 1.5px #b6c0cc, 0 30px 80px -20px rgba(0,0,0,.18), 0 0 100px -20px rgba(0,94,184,.18);
+  }
+  body[data-theme="light"] .screen{background:#ffffff}
+  body[data-theme="light"] .status-bar{background:#ffffff;color:#0f172a}
+  body[data-theme="light"] .status-bar .battery{border-color:#0f172a}
+  body[data-theme="light"] .status-bar .battery::after{background:#0f172a}
+  body[data-theme="light"] .notch{background:#0f172a}
+  body[data-theme="light"] .home-ind{background:#94a3b8;opacity:.7}
+
+  /* Header */
+  body[data-theme="light"] .brand .name{color:#0f172a}
+  body[data-theme="light"] .brand .name .pr-park{color:var(--pr-navy)}
+  body[data-theme="light"] .brand .name .pr-river{color:var(--pr-gold)}
+  body[data-theme="light"] .brand small{color:#64748b}
+  body[data-theme="light"] .header .icon-btn{background:#f1f5f9;border-color:#e2e8f0;color:#475569}
+  body[data-theme="light"] .header .icon-btn:hover{background:#e2e8f0}
+
+  /* Lot card */
+  body[data-theme="light"] .lot-card{background:#f1f5f9;border-color:#e2e8f0}
+  body[data-theme="light"] .lot-card .pin{background:#ffffff;border-color:#e2e8f0;color:var(--teal)}
+  body[data-theme="light"] .lot-card h1{color:#0f172a}
+  body[data-theme="light"] .lot-card .addr{color:#64748b}
+
+  /* Section labels */
+  body[data-theme="light"] .field-block .lbl{color:#0f172a}
+
+  /* Plate field */
+  body[data-theme="light"] .plate-card{background:#f1f5f9;border-color:#e2e8f0}
+  body[data-theme="light"] .plate-card .state{color:#0f172a;border-right-color:#e2e8f0}
+  body[data-theme="light"] .plate-card .state::after{color:#94a3b8}
+  body[data-theme="light"] .plate-card .plate-input{color:#0f172a}
+  body[data-theme="light"] .plate-card .plate-input::placeholder{color:#cbd5e1}
+  body[data-theme="light"] .plate-card .scan-btn{border-color:#cbd5e1;color:#0f172a}
+  body[data-theme="light"] .plate-card .scan-btn:hover{background:#e2e8f0}
+
+  /* Phone */
+  body[data-theme="light"] .phone-card{background:#f1f5f9;border-color:#e2e8f0}
+  body[data-theme="light"] .phone-card .country{border-right-color:#e2e8f0;color:#0f172a}
+  body[data-theme="light"] .phone-card .country::after{color:#94a3b8}
+  body[data-theme="light"] .phone-card input{color:#0f172a}
+  body[data-theme="light"] .phone-card input::placeholder{color:#cbd5e1}
+
+  /* Duration card */
+  body[data-theme="light"] .dur-head h3{color:#0f172a}
+  body[data-theme="light"] .dur-card{background:linear-gradient(180deg,#f1f5f9,#e9eff5);border-color:#e2e8f0}
+  body[data-theme="light"] .dur-display .big{color:#0f172a}
+  body[data-theme="light"] .dur-display .lbl{color:#64748b}
+  body[data-theme="light"] .dur-display .ends{color:#475569}
+  body[data-theme="light"] .dur-display .ends b{color:#0f172a}
+  body[data-theme="light"] .slider-rail{background:#cbd5e1}
+  body[data-theme="light"] .slider-ticks .tick{background:#94a3b8}
+  body[data-theme="light"] .slider-ticks .tick.major{background:#64748b}
+  body[data-theme="light"] input[type=range].slider::-webkit-slider-thumb{background:#fff;box-shadow:0 0 0 4px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.18), inset 0 0 0 6px var(--teal)}
+  body[data-theme="light"] input[type=range].slider::-moz-range-thumb{background:#fff;box-shadow:0 0 0 4px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.18), inset 0 0 0 6px var(--teal)}
+  body[data-theme="light"] .slider-labels{color:#64748b}
+
+  /* Quick chips */
+  body[data-theme="light"] .chip{background:#f1f5f9;border-color:#e2e8f0;color:#475569}
+  body[data-theme="light"] .chip:hover{background:#e2e8f0;color:#0f172a}
+  body[data-theme="light"] .chip.on{background:rgba(0,94,184,.08);border-color:rgba(0,94,184,.40);color:var(--teal)}
+
+  /* Promo */
+  body[data-theme="light"] .promo .sublabel{color:#475569}
+  body[data-theme="light"] .promo .sublabel .opt{color:#94a3b8}
+  body[data-theme="light"] .promo-card{background:#f1f5f9;border-color:#e2e8f0}
+  body[data-theme="light"] .promo-card input{color:#0f172a}
+  body[data-theme="light"] .promo-card input::placeholder{color:#94a3b8}
+  body[data-theme="light"] .promo-card button{background:#0f172a;color:#fff}
+  body[data-theme="light"] .promo-card button:hover{background:#1e293b}
+  body[data-theme="light"] .promo-card button.applied{background:var(--green);color:#07130b}
+
+  /* Receipt */
+  body[data-theme="light"] .receipt{border-top-color:#e2e8f0}
+  body[data-theme="light"] .rrow{color:#475569}
+  body[data-theme="light"] .rrow.total{color:#0f172a;border-top-color:#e2e8f0}
+
+  /* Wallet pay buttons */
+  /* ════════════════════════════════════════════════════════════════
+     PAYMENT PROCESSING OVERLAY + SESSION ACTIVE VIEW
+     ════════════════════════════════════════════════════════════════ */
+
+  /* Processing overlay (full-screen, anchored to .device so it doesn't scroll) */
+  .pay-overlay{position:absolute;inset:10px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;border-radius:36px}
+  .pay-overlay.show{display:flex}
+  body[data-theme="dark"] .pay-overlay{background:rgba(6,9,12,.96)}
+  .pay-overlay .pay-spinner{width:60px;height:60px;border-radius:50%;border:4px solid rgba(0,94,184,.15);border-top-color:var(--pr-navy);animation:pay-spin 0.9s linear infinite}
+  @keyframes pay-spin{to{transform:rotate(360deg)}}
+  .pay-overlay h2{margin:0;font-size:18px;font-weight:700;color:var(--pr-navy)}
+  body[data-theme="light"] .pay-overlay h2{color:var(--pr-navy)}
+  .pay-overlay p{margin:0;font-size:13px;color:#64748b}
+
+  /* Success splash */
+  .pay-overlay .success-circle{width:74px;height:74px;border-radius:50%;background:var(--pr-navy);display:grid;place-items:center;color:var(--pr-gold);transform:scale(0);animation:success-pop .45s cubic-bezier(0.34,1.56,0.64,1) forwards}
+  .pay-overlay .success-circle svg{width:36px;height:36px}
+  @keyframes success-pop{0%{transform:scale(0)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .pay-overlay .success-amt{font-size:30px;font-weight:800;color:var(--pr-navy);letter-spacing:-.02em;font-feature-settings:"tnum"}
+  .pay-overlay .success-amt.free{color:#16a34a;letter-spacing:.06em}
+
+  /* Session active view (replaces .app contents) */
+  .session-view{display:none;flex-direction:column;gap:14px;padding:20px 18px 28px;animation:fade-in .3s ease-out}
+  .session-view.show{display:flex}
+  @keyframes fade-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Top brand bar (smaller in active state) */
+  .sess-brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .sess-brand .mark-mini{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0}
+  .pw-mark-mini{width:32px;height:32px;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(123,184,220,.30))}
+  .sess-brand .name{font-weight:800;font-size:13.5px;color:#0f172a;letter-spacing:-.005em;line-height:1}
+  .sess-brand .name .pr-park{color:var(--pr-navy)}
+  .sess-brand .name .pr-river{color:var(--pr-gold)}
+  .sess-brand small{display:block;font-size:8.5px;letter-spacing:.18em;color:#94a3b8;font-weight:700;margin-top:2px}
+  .sess-brand .badge-active{margin-left:auto;display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:9.5px;font-weight:800;padding:4px 9px;border-radius:999px;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 4px 10px -4px rgba(34,197,94,.5)}
+  .sess-brand .badge-active::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;animation:active-pulse 1.4s ease-in-out infinite}
+  @keyframes active-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.7)}}
+
+  /* TIMER CARD — the hero */
+  .timer-card{background:linear-gradient(140deg,var(--pr-navy) 0%,var(--pr-navy-2) 100%);border-radius:22px;padding:22px 22px 20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 20px 40px -20px rgba(0,94,184,.4)}
+  .timer-card::before{content:"";position:absolute;top:-30%;right:-15%;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(254,80,0,.18),transparent 70%)}
+  .timer-card::after{content:"";position:absolute;bottom:-40%;left:-20%;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(254,80,0,.10),transparent 70%)}
+  .timer-card .countdown{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:center;gap:5px;font-feature-settings:"tnum";margin-top:2px;margin-bottom:6px}
+  .timer-card .num{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1;color:#fff;background:linear-gradient(180deg,#fff 0%,#fff4ec 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-feature-settings:"tnum"}
+  .timer-card .num-lbl{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:6px;text-align:center}
+  .timer-card .colon{font-size:28px;font-weight:300;color:rgba(255,255,255,.45);line-height:1;margin-top:2px;animation:colon-blink 1s ease-in-out infinite}
+  @keyframes colon-blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .timer-card.expiring .num{background:linear-gradient(180deg,#fff 0%,#fecaca 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .timer-card.expiring{box-shadow:0 20px 40px -20px rgba(239,68,68,.5)}
+  .timer-card.expiring .center-head{color:#fca5a5}
+  .timer-card.expiring .pct{color:#fca5a5}
+  .timer-card.expiring .pct svg{color:#fca5a5}
+
+  /* Progress ring around timer */
+  .timer-ring-wrap{position:relative;z-index:1;display:flex;justify-content:center;margin-bottom:8px}
+  .timer-ring{width:240px;height:240px;position:relative}
+  .timer-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .timer-ring .track{fill:none;stroke:rgba(255,255,255,.10);stroke-width:8}
+  .timer-ring .progress{fill:none;stroke:var(--pr-gold);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(0.4,0,0.2,1);filter:drop-shadow(0 0 6px rgba(254,80,0,.6))}
+  .timer-ring .center-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px}
+  .timer-ring .center-head{font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:8px}
+  .timer-ring .pct{font-size:10px;color:rgba(245,184,0,.85);letter-spacing:.10em;text-transform:uppercase;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:4px}
+  .timer-ring .pct svg{width:11px;height:11px;color:var(--pr-gold);transform:none}
+
+  /* Expires-at strip */
+  .timer-card .expires-strip{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)}
+  .timer-card .expires-strip .col{font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.10em;text-transform:uppercase;font-weight:700}
+  .timer-card .expires-strip .col b{display:block;color:#fff;font-weight:700;font-size:14px;letter-spacing:0;text-transform:none;margin-top:3px;font-feature-settings:"tnum"}
+  .timer-card .expires-strip .col small{display:block;color:rgba(255,255,255,.55);font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;margin-top:1px}
+
+  /* Plate display */
+  .session-plate-card{display:flex;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 4px 14px -8px rgba(0,94,184,.10)}
+  .session-plate-card .plate-display{font-family:ui-monospace,monospace;background:linear-gradient(180deg,#fff,#f4f8fc);color:#0c1117;font-size:18px;font-weight:800;padding:8px 14px;border-radius:7px;letter-spacing:.04em;border:1.5px solid #005EB8;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 0 rgba(0,0,0,.08)}
+  .session-plate-card .plate-meta{flex:1;min-width:0}
+  .session-plate-card .plate-meta b{display:block;font-size:13px;color:#0f172a;font-weight:700}
+  .session-plate-card .plate-meta small{display:block;font-size:11px;color:#64748b;margin-top:1px}
+
+  /* Detail card stack */
+  .session-detail-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px -8px rgba(0,94,184,.08)}
+  .sess-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #f1f5f9}
+  .sess-row:last-child{border-bottom:0}
+  .sess-row .ic{width:34px;height:34px;border-radius:9px;background:#f1f5f9;color:var(--pr-navy);display:grid;place-items:center;flex-shrink:0}
+  .sess-row .ic svg{width:16px;height:16px}
+  .sess-row .lbl{flex:1;min-width:0}
+  .sess-row .lbl small{display:block;font-size:10.5px;color:#64748b;letter-spacing:.06em;font-weight:600;text-transform:uppercase}
+  .sess-row .lbl b{display:block;font-size:13.5px;color:#0f172a;font-weight:600;margin-top:1px;font-feature-settings:"tnum"}
+  .sess-row .right{font-size:12.5px;color:#475569;font-weight:600;font-family:ui-monospace,monospace;text-align:right;flex-shrink:0}
+  .sess-row .right.amt-free{color:#16a34a;font-weight:800;letter-spacing:.04em;font-family:inherit}
+
+  /* Card brand icon */
+  .card-brand{width:42px;height:28px;border-radius:5px;background:#fff;border:1px solid #e2e8f0;display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:.04em;flex-shrink:0;font-family:ui-monospace,monospace}
+  .card-brand.free{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border-color:#16a34a;letter-spacing:.06em}
+  .card-brand.visa{background:linear-gradient(135deg,#1a1f71,#15327f);color:#f7c739}
+  .card-brand.amex{background:linear-gradient(135deg,#006fcf,#0099ff);color:#fff;letter-spacing:0;font-size:9px}
+  .card-brand.mc{background:#fff;position:relative}
+  .card-brand.mc::before,.card-brand.mc::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;top:50%;transform:translateY(-50%)}
+  .card-brand.mc::before{background:#eb001b;left:7px}
+  .card-brand.mc::after{background:#f79e1b;right:7px;mix-blend-mode:multiply}
+  .card-brand.discover{background:linear-gradient(135deg,#fff,#fff);color:#ff6000;letter-spacing:0;font-size:9px;border-color:#ff6000}
+  .card-brand.applepay{background:#000;color:#fff;font-size:13px;letter-spacing:-.02em}
+  .card-brand.gpay{background:#fff;color:#3c4043;font-size:9px;letter-spacing:0}
+
+  /* Action buttons */
+  .session-actions{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .extend-btn{width:100%;padding:15px 18px;background:linear-gradient(180deg,var(--pr-gold),var(--pr-gold-2));color:#fff;border:0;border-radius:14px;font-size:15px;font-weight:800;letter-spacing:.005em;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 8px 20px -8px rgba(254,80,0,.5);transition:transform .12s,box-shadow .12s}
+  .extend-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px -8px rgba(254,80,0,.6)}
+  .extend-btn:active{transform:translateY(0)}
+  .extend-btn svg{width:17px;height:17px}
+
+  /* Transaction list */
+  .tx-section h4{margin:0 0 8px;font-size:11px;color:#64748b;font-weight:700;letter-spacing:.10em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .tx-section h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#e2e8f0,transparent)}
+  .tx-list{display:flex;flex-direction:column;gap:8px}
+  .tx-row{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:12px 14px;display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;animation:fade-in .35s ease-out}
+  .tx-row .tx-ic{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,rgba(0,94,184,.08),rgba(0,94,184,.04));display:grid;place-items:center;color:var(--pr-navy)}
+  .tx-row .tx-ic.extend{background:linear-gradient(135deg,rgba(254,80,0,.18),rgba(254,80,0,.08));color:var(--pr-gold-2)}
+  .tx-row .tx-ic svg{width:17px;height:17px}
+  .tx-row .tx-info b{display:block;font-size:13px;color:#0f172a;font-weight:700}
+  .tx-row .tx-info small{display:block;font-size:11px;color:#64748b;margin-top:1px;font-feature-settings:"tnum"}
+  .tx-row .tx-info .conf{font-family:ui-monospace,monospace;font-size:10px;color:#94a3b8}
+  .tx-row .tx-amt{text-align:right;font-family:ui-monospace,monospace;font-weight:700;font-size:14px;color:#0f172a;letter-spacing:-.01em}
+  .tx-row .tx-amt.amt-free{color:#16a34a;font-family:inherit;letter-spacing:.04em}
+  .tx-row .tx-amt.amt-free small{color:#16a34a;opacity:.7}
+  .tx-row .tx-amt small{display:block;font-size:9.5px;color:#94a3b8;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:1px;font-family:inherit}
+
+  /* Extend modal — slides up from bottom (anchored to .device) */
+  .ext-backdrop{position:absolute;inset:10px;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);display:none;z-index:40;animation:fade-in .2s ease-out;border-radius:36px}
+  .ext-backdrop.show{display:block}
+  .ext-sheet{position:absolute;left:10px;right:10px;bottom:10px;background:#fff;border-radius:22px 22px 36px 36px;padding:20px 18px 22px;z-index:41;display:none;flex-direction:column;gap:14px;box-shadow:0 -10px 40px -10px rgba(0,0,0,.3);transform:translateY(100%);transition:transform .35s cubic-bezier(0.32,0.72,0,1);max-height:80%;overflow-y:auto}
+  .ext-sheet.show{display:flex;transform:translateY(0)}
+  .ext-handle{width:36px;height:4px;background:#cbd5e1;border-radius:2px;margin:0 auto 8px}
+  .ext-sheet h3{margin:0;font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.01em}
+  .ext-sheet .ext-sub{font-size:12.5px;color:#64748b;margin-top:-8px}
+  .ext-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+  .ext-opt{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;transition:.15s;font-family:inherit}
+  .ext-opt:hover{background:#f1f5f9;border-color:#cbd5e1}
+  .ext-opt b{display:block;font-size:15px;color:#0f172a;font-weight:800;letter-spacing:-.005em}
+  .ext-opt small{display:block;font-size:11px;color:#64748b;margin-top:2px;font-feature-settings:"tnum"}
+  .ext-opt.on{background:linear-gradient(180deg,rgba(0,94,184,.06),rgba(22,50,105,.03));border-color:var(--pr-navy);box-shadow:0 0 0 3px rgba(0,94,184,.10)}
+  .ext-opt.on b{color:var(--pr-navy)}
+  .ext-summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  .ext-summary .row{display:flex;justify-content:space-between;font-size:12.5px;color:#475569}
+  .ext-summary .row.total{padding-top:7px;margin-top:1px;border-top:1px solid #e2e8f0;font-weight:800;color:#0f172a;font-size:14px}
+  .ext-summary .row b{font-family:ui-monospace,monospace;font-feature-settings:"tnum";color:#0f172a;font-weight:700}
+  .ext-summary .row.total b{font-size:16px;color:var(--pr-navy)}
+  .ext-confirm{width:100%;padding:14px;background:var(--pr-navy);color:#fff;border:0;border-radius:12px;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.005em}
+  .ext-confirm:hover{background:var(--pr-navy-2)}
+  .ext-confirm:disabled{opacity:.45;cursor:not-allowed}
+  .ext-confirm svg{width:15px;height:15px}
+  .ext-cancel{width:100%;padding:11px;background:transparent;color:#64748b;border:0;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+
+  /* Time-extended toast on confirm */
+  .ext-flash{position:absolute;top:100px;left:50%;transform:translateX(-50%) scale(0);background:linear-gradient(135deg,var(--pr-gold),var(--sm-yellow));color:#3a1500;padding:10px 16px;border-radius:999px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:7px;z-index:35;box-shadow:0 12px 28px -10px rgba(254,80,0,.6);letter-spacing:.005em}
+  .ext-flash.show{animation:flash-pop 2.2s ease-out forwards}
+  @keyframes flash-pop{0%{transform:translateX(-50%) scale(0)}15%{transform:translateX(-50%) scale(1.05)}25%{transform:translateX(-50%) scale(1)}80%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(.95);opacity:0}}
+  .ext-flash svg{width:14px;height:14px}
+
+  /* When session is active, hide the form */
+  .app.session-active #payForm{display:none}
+  .app.session-active .session-view{display:flex}
+  body[data-theme="light"] .or-divider{color:#94a3b8}
+  body[data-theme="light"] .or-divider::before,
+  body[data-theme="light"] .or-divider::after{background:#e2e8f0}
+
+  /* Pay button — keep gradient but darker text */
+  body[data-theme="light"] .pay{box-shadow:0 14px 34px -12px rgba(0,94,184,.40);color:#04231b}
+  body[data-theme="light"] .secure-note{color:#94a3b8}
+
+  /* URL bar */
+  body[data-theme="light"] .preview-bar{background:#ffffff;border-color:#e2e8f0;color:#64748b}
+  body[data-theme="light"] .preview-bar .url{background:#f1f5f9;color:#475569}
+
+  /* Scan modal — keep dark for camera-style framing */
+  body[data-theme="light"] .scan-modal{background:rgba(0,0,0,.92)}
+
+  /* Theme toggle pill */
+  .theme-toggle{position:absolute;top:14px;right:54px;background:#181d24;border:1px solid #232c36;border-radius:999px;padding:5px 10px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;z-index:30}
+  .theme-toggle svg{width:12px;height:12px}
+  .theme-toggle:hover{color:#fff;background:#222932}
+  body[data-theme="light"] .theme-toggle{background:#f1f5f9;border-color:#e2e8f0;color:#475569}
+  body[data-theme="light"] .theme-toggle:hover{background:#e2e8f0;color:#0f172a}
+
+  /* ════════════════════════════════════════════════════════════════
+     SANTA MONICA BRAND WORDMARK
+     Two-line stacked treatment matching the logo:
+       small "City of" / large "Santa Monica" in brand blue
+     ════════════════════════════════════════════════════════════════ */
+  .brand .name.sm-name{display:flex;flex-direction:column;line-height:1;gap:1px}
+  .brand .name.sm-name .sm-cityof{font-size:9px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--sm-blue);opacity:.85}
+  .brand .name.sm-name .sm-city{font-size:15px;font-weight:800;letter-spacing:-.01em;color:#0f172a}
+  body[data-theme="light"] .brand .name.sm-name .sm-cityof{color:var(--sm-blue);opacity:.9}
+  body[data-theme="light"] .brand .name.sm-name .sm-city{color:#0f172a}
+  body[data-theme="dark"] .brand .name.sm-name .sm-cityof{color:var(--sm-blue-light)}
+  body[data-theme="dark"] .brand .name.sm-name .sm-city{color:#f1f5f9}
+
+  /* Session view smaller wordmark */
+  .sess-brand .name.sm-name{display:flex;flex-direction:column;line-height:1;gap:0px}
+  .sess-brand .name.sm-name .sm-cityof{font-size:7.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--sm-blue);opacity:.85}
+  .sess-brand .name.sm-name .sm-city{font-size:13px;font-weight:800;letter-spacing:-.005em;color:#0f172a}
+
+  /* ════════════════════════════════════════════════════════════════
+     SESSION HAMBURGER + SLIDE-IN MENU
+     Only rendered inside the session view, so it appears only AFTER payment.
+     ════════════════════════════════════════════════════════════════ */
+  .sess-brand .ham-btn{
+    margin-left:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    width:34px;height:34px;background:#fff;border:1px solid #e2e8f0;
+    border-radius:9px;cursor:pointer;flex-shrink:0;padding:0;transition:.15s;font-family:inherit;
+    box-shadow:0 2px 8px -3px rgba(0,94,184,.18);
+  }
+  .sess-brand .ham-btn:hover{background:#f1f5f9;border-color:var(--sm-blue);box-shadow:0 4px 12px -3px rgba(0,94,184,.30)}
+  .sess-brand .ham-btn span{display:block;width:15px;height:1.8px;background:var(--sm-blue);border-radius:2px;transition:.15s}
+  /* Push the badge to before the hamburger so order is: brand · badge · hamburger */
+  .sess-brand .badge-active{margin-left:auto}
+  .sess-brand .ham-btn{margin-left:8px}
+
+  /* Menu backdrop and panel — anchored to .device, slide from right */
+  .menu-backdrop{
+    position:absolute;inset:10px;background:rgba(15,23,42,0);backdrop-filter:blur(0px);
+    z-index:50;display:none;pointer-events:none;border-radius:36px;
+    transition:background .35s cubic-bezier(.32,.72,0,1), backdrop-filter .35s;
+  }
+  .menu-backdrop.show{display:block;background:rgba(15,23,42,.40);backdrop-filter:blur(3px);pointer-events:auto}
+
+  .menu-panel{
+    position:absolute;top:10px;bottom:10px;right:-340px;width:80%;max-width:320px;
+    background:#fff;z-index:51;display:flex;flex-direction:column;overflow:hidden;
+    border-top-right-radius:36px;border-bottom-right-radius:36px;
+    border-top-left-radius:22px;border-bottom-left-radius:22px;
+    box-shadow:-12px 0 40px -10px rgba(0,0,0,.30);
+    visibility:hidden;
+    transition:right .38s cubic-bezier(.32,.72,0,1), visibility 0s linear .38s;
+  }
+  .menu-panel.show{right:10px;visibility:visible;transition:right .38s cubic-bezier(.32,.72,0,1), visibility 0s linear 0s}
+
+  .menu-hdr{
+    background:linear-gradient(180deg,var(--sm-blue) 0%,var(--sm-blue-light) 100%);
+    padding:38px 16px 16px;position:relative;color:#fff;flex-shrink:0;
+  }
+  /* Decorative SM strip across the top of the menu — orange/yellow/teal accent */
+  .menu-hdr::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,#FE5000 0%,#FFB81C 50%,#2AD2C9 100%);
+  }
+  .menu-hdr::after{
+    content:"";position:absolute;bottom:-30%;right:-15%;width:180px;height:180px;border-radius:50%;
+    background:radial-gradient(circle,rgba(254,80,0,.22),transparent 70%);pointer-events:none;
+  }
+  .menu-hdr-row{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+  .menu-close{
+    width:30px;height:30px;border-radius:8px;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.20);
+    color:#fff;cursor:pointer;display:grid;place-items:center;font-family:inherit;
+    transition:.15s;flex-shrink:0;
+  }
+  .menu-close:hover{background:rgba(255,255,255,.24)}
+  .menu-close svg{width:14px;height:14px}
+  .menu-hdr-title{font-size:13px;font-weight:800;letter-spacing:-.005em;flex:1}
+  .menu-avatar{
+    width:30px;height:30px;border-radius:50%;
+    background:linear-gradient(135deg,var(--sm-orange) 0%,var(--sm-yellow) 100%);
+    display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;
+    flex-shrink:0;box-shadow:0 4px 12px -4px rgba(254,80,0,.50)
+  }
+
+  .menu-body{flex:1;overflow-y:auto;overflow-x:hidden;background:#f8fafc;scrollbar-width:none}
+  .menu-body::-webkit-scrollbar{display:none}
+
+  .menu-section-lbl{
+    font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:#94a3b8;padding:14px 16px 6px;
+  }
+
+  .menu-item{
+    display:flex;align-items:center;gap:12px;padding:13px 16px;
+    background:#fff;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .12s;
+    font-family:inherit;text-align:left;border-left:0;border-right:0;border-top:0;width:100%;
+  }
+  .menu-item:hover{background:#f1f5f9}
+  .menu-item:active{background:rgba(0,94,184,.05)}
+  .menu-item-ico{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;
+  }
+  .menu-item-ico svg{width:17px;height:17px}
+  .menu-item-ico.activity{background:rgba(0,94,184,.10);color:var(--sm-blue)}
+  .menu-item-ico.payment{background:rgba(254,80,0,.10);color:var(--sm-orange)}
+  .menu-item-ico.passes{background:rgba(255,184,28,.14);color:#C8930F}
+  .menu-item-ico.vehicles{background:rgba(42,210,201,.14);color:#1F9C95}
+  .menu-item-ico.settings{background:rgba(99,102,241,.10);color:#6366F1}
+  .menu-item-ico.help{background:rgba(139,92,246,.10);color:#8B5CF6}
+  .menu-item-txt{flex:1;min-width:0}
+  .menu-item-title{font-size:13px;font-weight:700;color:#0f172a;display:block;letter-spacing:-.005em}
+  .menu-item-sub{font-size:10.5px;color:#64748b;font-weight:500;margin-top:1px;display:block;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .menu-item-chev{width:12px;height:12px;color:#cbd5e1;flex-shrink:0}
+
+  /* Sign-out row at the bottom */
+  .menu-signout{padding:16px;display:flex;flex-direction:column;gap:6px;background:#f8fafc}
+  .menu-signout button{
+    width:100%;padding:11px;background:#fff;color:#475569;border:1px solid #e2e8f0;
+    border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .menu-signout button:hover{background:#f1f5f9;color:#0f172a}
+  .menu-signout .legal{font-size:9.5px;color:#94a3b8;text-align:center;line-height:1.5;margin-top:6px}
+  .menu-signout .legal a{color:var(--sm-blue);text-decoration:none}
+
+  /* Section page that slides in over the menu */
+  .menu-section{
+    position:absolute;top:10px;bottom:10px;right:-340px;width:80%;max-width:320px;
+    background:#fff;z-index:52;display:flex;flex-direction:column;overflow:hidden;
+    border-top-right-radius:36px;border-bottom-right-radius:36px;
+    border-top-left-radius:22px;border-bottom-left-radius:22px;
+    visibility:hidden;
+    transition:right .35s cubic-bezier(.32,.72,0,1), visibility 0s linear .35s;
+  }
+  .menu-section.show{right:10px;visibility:visible;transition:right .35s cubic-bezier(.32,.72,0,1), visibility 0s linear 0s}
+  .menu-section .menu-hdr{padding:38px 16px 16px}
+  .menu-section .sec-back-btn{
+    display:flex;align-items:center;gap:5px;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.20);color:#fff;
+    cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;
+    padding:6px 10px 6px 7px;border-radius:8px;transition:.15s;
+  }
+  .menu-section .sec-back-btn:hover{background:rgba(255,255,255,.24)}
+  .menu-section .sec-back-btn svg{width:13px;height:13px}
+  .menu-section .sec-body{flex:1;overflow-y:auto;background:#f8fafc;padding:14px;scrollbar-width:none}
+  .menu-section .sec-body::-webkit-scrollbar{display:none}
+  .sec-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:12.5px;font-weight:600;line-height:1.6}
+  .sec-empty svg{width:40px;height:40px;margin-bottom:10px;color:#cbd5e1;display:block;margin-left:auto;margin-right:auto}
+
+  /* Activity items */
+  .act-item{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 13px;display:flex;align-items:center;gap:11px;margin-bottom:8px;box-shadow:0 1px 3px rgba(15,23,42,.03)}
+  .act-ic{width:34px;height:34px;border-radius:9px;background:rgba(0,94,184,.10);color:var(--sm-blue);display:grid;place-items:center;flex-shrink:0}
+  .act-ic svg{width:16px;height:16px}
+  .act-info{flex:1;min-width:0}
+  .act-info b{display:block;font-size:12.5px;color:#0f172a;font-weight:700;letter-spacing:-.005em}
+  .act-info small{display:block;font-size:10.5px;color:#64748b;margin-top:1px;font-feature-settings:"tnum"}
+  .act-amt{font-family:ui-monospace,monospace;font-size:13px;font-weight:700;color:#0f172a;flex-shrink:0}
+
+  /* Payment method items in the menu */
+  .pm-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;display:flex;align-items:center;gap:11px;margin-bottom:8px}
+  .pm-row .card-brand{width:42px;height:28px;flex-shrink:0}
+  .pm-row .pm-info{flex:1;min-width:0}
+  .pm-row .pm-info b{display:block;font-size:12.5px;color:#0f172a;font-weight:700}
+  .pm-row .pm-info small{display:block;font-size:10.5px;color:#64748b;margin-top:1px}
+  .pm-row .pm-primary-tag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:rgba(0,94,184,.10);color:var(--sm-blue);padding:3px 7px;border-radius:999px}
+  .pm-add{width:100%;padding:12px;background:#fff;border:1.5px dashed #cbd5e1;border-radius:12px;color:var(--sm-blue);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+  .pm-add:hover{border-color:var(--sm-blue);background:rgba(0,94,184,.04)}
+
+  /* Vehicles */
+  .veh-row{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:11px;margin-bottom:8px}
+  .veh-plate{font-family:ui-monospace,monospace;background:linear-gradient(180deg,#fff,#f4f8fc);color:#0c1117;font-size:13px;font-weight:800;padding:6px 10px;border-radius:6px;letter-spacing:.04em;border:1.5px solid var(--sm-blue);flex-shrink:0}
+  .veh-info{flex:1;min-width:0}
+  .veh-info b{display:block;font-size:12.5px;color:#0f172a;font-weight:700}
+  .veh-info small{display:block;font-size:10.5px;color:#64748b}
+  .veh-primary-tag{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:rgba(254,80,0,.10);color:var(--sm-orange);padding:3px 7px;border-radius:999px}
+
+  /* Settings rows */
+  .set-grp{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:12px}
+  .set-row{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1px solid #f1f5f9}
+  .set-row:last-child{border-bottom:0}
+  .set-row .set-lbl{flex:1;font-size:12.5px;color:#0f172a;font-weight:600}
+  .set-row .set-val{font-size:11.5px;color:#64748b;font-weight:500;font-family:ui-monospace,monospace}
+  .set-row .toggle{width:34px;height:20px;background:var(--sm-blue);border-radius:999px;position:relative;cursor:pointer;flex-shrink:0;transition:background .15s}
+  .set-row .toggle::after{content:"";position:absolute;top:2px;left:16px;width:16px;height:16px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
+  .set-row .toggle.off{background:#cbd5e1}
+  .set-row .toggle.off::after{left:2px}
+
+  /* Help / FAQ */
+  .help-q{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 13px;margin-bottom:8px}
+  .help-q b{display:block;font-size:12.5px;color:#0f172a;font-weight:700;margin-bottom:4px}
+  .help-q span{display:block;font-size:11.5px;color:#64748b;line-height:1.5}
+  .help-contact{background:linear-gradient(135deg,var(--sm-blue),var(--sm-blue-light));color:#fff;border:0;border-radius:12px;padding:14px;width:100%;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 6px 16px -6px rgba(0,94,184,.50);margin-top:6px}
+  .help-contact svg{width:15px;height:15px}
+
+
+  /* ════════════════════════════════════════════════════════════════
+     PARKWELL DARK THEME — FULL OVERRIDE
+     Deep navy throughout, white logo, white-to-dim text, accent in
+     brand blue (#2A5D7C → #7BB8DC ramp).
+     This block runs LAST so it wins over earlier light-theme rules.
+     ════════════════════════════════════════════════════════════════ */
+
+  /* Page + device frame */
+  body{
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(74,143,184,.12), transparent 60%),
+      radial-gradient(900px 500px at -5% 110%, rgba(42,93,124,.10), transparent 60%),
+      var(--pw-deep-1) !important;
+  }
+  .device{
+    background:var(--pw-deep-1) !important;
+    box-shadow:0 0 0 1.5px #1f2630, 0 30px 80px -20px rgba(0,0,0,.85),
+               0 0 100px -20px rgba(123,184,220,.18) !important;
+  }
+  .screen{background:var(--pw-deep-2) !important}
+  .status-bar{background:var(--pw-deep-2) !important;color:#fff !important}
+  .status-bar .battery{border-color:#fff !important}
+  .status-bar .battery::after{background:#fff !important}
+  .status-bar .battery .lvl{background:var(--pw-brand-glow) !important}
+  .notch{background:#000 !important}
+  .home-ind{background:#fff !important;opacity:.85 !important}
+
+  /* URL bar above device */
+  .preview-bar{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    color:var(--pw-text-dim) !important;
+  }
+  .preview-bar .url{background:var(--pw-deep-2) !important;color:var(--pw-text-dim) !important}
+
+  /* Header brand */
+  .header .icon-btn{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    color:var(--pw-text-dim) !important;
+  }
+  .header .icon-btn:hover{background:var(--pw-deep-4) !important;color:#fff !important}
+  .brand .name.sm-name .sm-city{color:#fff !important;letter-spacing:-.02em !important}
+  .brand .name.sm-name{gap:2px !important}
+  .brand small{color:var(--pw-text-dim) !important}
+
+  /* Lot card */
+  .lot-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .lot-card .pin{
+    background:var(--pw-deep-2) !important;
+    border:1px solid var(--pw-border) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .lot-card h1{color:#fff !important}
+  .lot-card .addr{color:var(--pw-text-dim) !important}
+
+  /* Form field labels */
+  .field-block .lbl{color:#fff !important}
+
+  /* Plate field */
+  .plate-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .plate-card .state{color:#fff !important;border-right-color:var(--pw-border) !important}
+  .plate-card .state::after{color:var(--pw-text-dim) !important}
+  .plate-card .plate-input{color:#fff !important}
+  .plate-card .plate-input::placeholder{color:var(--pw-text-faint) !important}
+  .plate-card .scan-btn{
+    border:1.4px solid var(--pw-border) !important;
+    color:#fff !important;
+  }
+  .plate-card .scan-btn:hover{background:var(--pw-deep-4) !important;border-color:var(--pw-brand-light) !important}
+
+  /* Phone field */
+  .phone-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .phone-card .country{border-right-color:var(--pw-border) !important;color:#fff !important}
+  .phone-card .country::after{color:var(--pw-text-dim) !important}
+  .phone-card input{color:#fff !important}
+  .phone-card input::placeholder{color:var(--pw-text-faint) !important}
+
+  /* Duration card */
+  .dur-head h3{color:#fff !important}
+  .dur-head .pricetag{color:var(--pw-brand-glow) !important}
+  .dur-card{
+    background:linear-gradient(180deg,var(--pw-deep-3),var(--pw-deep-2)) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .dur-display .big{color:#fff !important}
+  .dur-display .lbl{color:var(--pw-text-dim) !important}
+  .dur-display .ends{color:var(--pw-text) !important}
+  .dur-display .ends b{color:#fff !important}
+
+  /* Slider */
+  .slider-rail{background:var(--pw-deep-4) !important}
+  .slider-fill{background:linear-gradient(90deg,var(--pw-brand-light),var(--pw-brand-glow)) !important}
+  .slider-ticks .tick{background:var(--pw-border) !important}
+  .slider-ticks .tick.major{background:#3a4654 !important}
+  .slider-ticks .tick.boundary{
+    background:var(--pw-brand-glow) !important;
+    box-shadow:0 0 8px rgba(123,184,220,.7) !important;
+  }
+  input[type=range].slider::-webkit-slider-thumb{
+    background:#fff !important;
+    box-shadow:0 0 0 4px rgba(123,184,220,.18), 0 4px 14px rgba(0,0,0,.55),
+               inset 0 0 0 6px var(--pw-brand) !important;
+  }
+  input[type=range].slider::-moz-range-thumb{
+    background:#fff !important;
+    box-shadow:0 0 0 4px rgba(123,184,220,.18), 0 4px 14px rgba(0,0,0,.55),
+               inset 0 0 0 6px var(--pw-brand) !important;
+  }
+  .slider-labels{color:var(--pw-text-dim) !important}
+  .slider-labels span:first-child{color:#7BFFB6 !important;font-weight:800 !important}
+
+  /* Chips */
+  .chip{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    color:var(--pw-text-dim) !important;
+  }
+  .chip:hover{background:var(--pw-deep-4) !important;color:#fff !important}
+  .chip.on{
+    background:rgba(74,143,184,.18) !important;
+    border-color:var(--pw-brand-light) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .free-pill{
+    background:linear-gradient(135deg,#16a34a,#22c55e) !important;
+    color:#fff !important;
+  }
+
+  /* Promo */
+  .promo .sublabel{color:var(--pw-text-dim) !important}
+  .promo .sublabel .opt{color:var(--pw-text-faint) !important}
+  .promo-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .promo-card input{color:#fff !important}
+  .promo-card input::placeholder{color:var(--pw-text-faint) !important}
+  .promo-card button{background:var(--pw-brand) !important;color:#fff !important}
+  .promo-card button:hover{background:var(--pw-brand-light) !important}
+  .promo-card button.applied{background:#16a34a !important;color:#fff !important}
+
+  /* Receipt */
+  .receipt{border-top:1px dashed var(--pw-border) !important}
+  .rrow{color:var(--pw-text-dim) !important}
+  .rrow.total{color:#fff !important;border-top-color:var(--pw-border) !important}
+
+  /* Wallet pay buttons */
+  .or-divider{color:var(--pw-text-dim) !important}
+  .or-divider::before, .or-divider::after{background:var(--pw-border) !important}
+
+  /* Main pay button — sky-blue gradient with white text */
+  .pay{
+    background:var(--ai-grad) !important;
+    color:#fff !important;
+    box-shadow:0 14px 34px -12px rgba(123,184,220,.5) !important;
+  }
+  .secure-note{color:var(--pw-text-dim) !important}
+
+  /* Scan modal — keep dark */
+  .scan-modal{background:rgba(10,22,40,.96) !important}
+  .scan-modal .frame{
+    border:2px solid var(--pw-brand-glow) !important;
+    background:linear-gradient(180deg,var(--pw-deep-2),var(--pw-deep-1)) !important;
+  }
+  .scan-modal .scan-line{
+    background:var(--pw-brand-glow) !important;
+    box-shadow:0 0 12px var(--pw-brand-glow) !important;
+  }
+  .scan-modal h3{color:#fff !important}
+  .scan-modal p{color:var(--pw-text-dim) !important}
+  .scan-modal .cancel{background:var(--pw-deep-3) !important;color:#fff !important}
+
+  /* Processing/success overlay */
+  .pay-overlay{background:rgba(10,22,40,.96) !important}
+  .pay-overlay .pay-spinner{
+    border:4px solid rgba(74,143,184,.18) !important;
+    border-top-color:var(--pw-brand-glow) !important;
+  }
+  .pay-overlay h2{color:#fff !important}
+  .pay-overlay p{color:var(--pw-text-dim) !important}
+  .pay-overlay .success-circle{
+    background:linear-gradient(135deg,var(--pw-brand),var(--pw-brand-light)) !important;
+    color:#fff !important;
+  }
+  .pay-overlay .success-amt{color:#fff !important}
+
+  /* ── SESSION VIEW (post-payment) ── */
+  .sess-brand .name.sm-name .sm-city{color:#fff !important;font-size:14px !important}
+  .sess-brand .name.sm-name .sm-cityof{display:none !important}
+  .sess-brand small{color:var(--pw-text-dim) !important}
+  .sess-brand .badge-active{
+    background:linear-gradient(135deg,#22c55e,#16a34a) !important;
+    box-shadow:0 4px 10px -4px rgba(34,197,94,.5) !important;
+  }
+  .sess-brand .ham-btn{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    box-shadow:0 2px 8px -3px rgba(0,0,0,.4) !important;
+  }
+  .sess-brand .ham-btn:hover{
+    background:var(--pw-deep-4) !important;
+    border-color:var(--pw-brand-light) !important;
+  }
+  .sess-brand .ham-btn span{background:#fff !important}
+
+  /* Timer card */
+  .timer-card{
+    /* Layered gradient: two radial highlights over a 5-stop diagonal sweep */
+    background:
+      radial-gradient(circle at 78% 12%, rgba(168,212,237,.42), transparent 55%),
+      radial-gradient(circle at 12% 88%, rgba(74,143,184,.32), transparent 55%),
+      linear-gradient(135deg,
+        #0F2A4D 0%,
+        #1E4A85 22%,
+        #2A5D7C 48%,
+        #4A8FB8 78%,
+        #1F427A 100%) !important;
+    box-shadow:
+      0 24px 50px -22px rgba(42,93,124,.75),
+      0 0 0 1px rgba(123,184,220,.18) inset !important;
+  }
+  .timer-card::before{
+    background:radial-gradient(circle,rgba(255,255,255,.20),transparent 70%) !important;
+  }
+  .timer-card::after{
+    background:radial-gradient(circle,rgba(168,212,237,.26),transparent 70%) !important;
+  }
+  /* Bump ring track visibility on the new richer background */
+  .timer-ring .track{stroke:rgba(255,255,255,.14) !important}
+  .timer-ring .track{stroke:rgba(255,255,255,.10) !important}
+  .timer-ring .progress{
+    stroke:#fff !important;
+    filter:drop-shadow(0 0 8px rgba(255,255,255,.5)) !important;
+  }
+  .timer-ring .pct{color:rgba(255,255,255,.85) !important}
+  .timer-ring .pct svg{color:#fff !important}
+  .timer-card .num{
+    background:linear-gradient(180deg,#fff 0%,#e6f3fb 100%) !important;
+    -webkit-background-clip:text !important; background-clip:text !important;
+    -webkit-text-fill-color:transparent !important;
+  }
+  .timer-card .expires-strip{border-top-color:rgba(255,255,255,.16) !important}
+
+  /* Plate display in session */
+  .session-plate-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    box-shadow:0 4px 14px -8px rgba(0,0,0,.4) !important;
+  }
+  .session-plate-card .plate-display{
+    background:linear-gradient(180deg,#fff,#dde9f3) !important;
+    color:#0c1117 !important;
+    border:1.5px solid var(--pw-brand-light) !important;
+  }
+  .session-plate-card .plate-meta b{color:#fff !important}
+  .session-plate-card .plate-meta small{color:var(--pw-text-dim) !important}
+
+  /* Session detail card */
+  .session-detail-card{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    box-shadow:0 4px 14px -8px rgba(0,0,0,.4) !important;
+  }
+  .sess-row{border-bottom:1px solid var(--pw-border-soft) !important}
+  .sess-row .ic{
+    background:var(--pw-deep-2) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .sess-row .lbl small{color:var(--pw-text-dim) !important}
+  .sess-row .lbl b{color:#fff !important}
+  .sess-row .right{color:var(--pw-text) !important}
+  .sess-row .right.amt-free{color:#7BFFB6 !important}
+
+  /* Card brand badges — invert backgrounds slightly */
+  .card-brand{background:var(--pw-deep-2) !important;border:1px solid var(--pw-border) !important;color:#fff !important}
+  .card-brand.visa{background:linear-gradient(135deg,#1a1f71,#15327f) !important;color:#f7c739 !important}
+  .card-brand.amex{background:linear-gradient(135deg,#006fcf,#0099ff) !important;color:#fff !important}
+  .card-brand.mc{background:#fff !important;border-color:#cbd5e1 !important}
+  .card-brand.discover{background:#fff !important;color:#ff6000 !important;border-color:#ff6000 !important}
+  .card-brand.applepay{background:#000 !important;color:#fff !important}
+  .card-brand.gpay{background:#fff !important;color:#3c4043 !important}
+  .card-brand.free{background:linear-gradient(135deg,#16a34a,#22c55e) !important;color:#fff !important}
+
+  /* Extend button */
+  .extend-btn{
+    background:linear-gradient(180deg,
+      #F5F9FC 0%,    /* top — bright chrome highlight */
+      #D5E2EF 18%,   /* upper silver */
+      #A8C2DA 42%,   /* mid silver-blue */
+      #6E9CC0 68%,   /* lower blue */
+      #4A8FB8 100%   /* base brand-light */
+    ) !important;
+    color:#0A1F3E !important;
+    text-shadow:0 1px 0 rgba(255,255,255,.45) !important;
+    box-shadow:
+      0 12px 30px -8px rgba(123,184,220,.75),
+      0 0 22px -4px rgba(168,212,237,.45),
+      inset 0 1px 0 rgba(255,255,255,.85),
+      inset 0 -2px 0 rgba(30,66,122,.18) !important;
+  }
+  .extend-btn:hover{
+    background:linear-gradient(180deg,
+      #FFFFFF 0%,
+      #E2ECF5 18%,
+      #B8CFE2 42%,
+      #7CAACB 68%,
+      #58A0C8 100%
+    ) !important;
+    box-shadow:
+      0 14px 36px -8px rgba(168,212,237,.85),
+      0 0 28px -4px rgba(168,212,237,.55),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -2px 0 rgba(30,66,122,.18) !important;
+  }
+  .extend-btn:active{
+    background:linear-gradient(180deg,
+      #C8D6E5 0%,
+      #A8C2DA 50%,
+      #4A8FB8 100%
+    ) !important;
+  }
+  /* Make the icon inside the button match the dark text */
+  .extend-btn svg{color:#0A1F3E !important;stroke:#0A1F3E !important}
+
+  /* Transaction list */
+  .tx-section h4{color:var(--pw-text-dim) !important}
+  .tx-section h4::after{background:linear-gradient(90deg,var(--pw-border),transparent) !important}
+  .tx-row{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.2) !important;
+  }
+  .tx-row .tx-ic{
+    background:linear-gradient(135deg,rgba(74,143,184,.18),rgba(74,143,184,.06)) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .tx-row .tx-ic.extend{
+    background:linear-gradient(135deg,rgba(123,184,220,.22),rgba(123,184,220,.08)) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .tx-row .tx-info b{color:#fff !important}
+  .tx-row .tx-info small{color:var(--pw-text-dim) !important}
+  .tx-row .tx-info .conf{color:var(--pw-text-faint) !important}
+  .tx-row .tx-amt{color:#fff !important}
+  .tx-row .tx-amt.amt-free{color:#7BFFB6 !important}
+  .tx-row .tx-amt small{color:var(--pw-text-faint) !important}
+
+  /* Extend modal — keep light surface for high readability on the form */
+  .ext-backdrop{background:rgba(0,0,0,.55) !important;backdrop-filter:blur(4px) !important}
+  .ext-sheet{
+    background:var(--pw-deep-3) !important;
+    box-shadow:0 -10px 40px -10px rgba(0,0,0,.5) !important;
+  }
+  .ext-handle{background:var(--pw-border) !important}
+  .ext-sheet h3{color:#fff !important}
+  .ext-sheet .ext-sub{color:var(--pw-text-dim) !important}
+  .ext-opt{
+    background:var(--pw-deep-2) !important;
+    border:1.5px solid var(--pw-border) !important;
+  }
+  .ext-opt:hover{background:var(--pw-deep-4) !important;border-color:var(--pw-brand-light) !important}
+  .ext-opt b{color:#fff !important}
+  .ext-opt small{color:var(--pw-text-dim) !important}
+  .ext-opt.on{
+    background:linear-gradient(180deg,rgba(74,143,184,.20),rgba(74,143,184,.10)) !important;
+    border-color:var(--pw-brand-light) !important;
+    box-shadow:0 0 0 3px rgba(74,143,184,.20) !important;
+  }
+  .ext-opt.on b{color:var(--pw-brand-glow) !important}
+  .ext-summary{
+    background:var(--pw-deep-2) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .ext-summary .row{color:var(--pw-text-dim) !important}
+  .ext-summary .row.total{color:#fff !important;border-top-color:var(--pw-border) !important}
+  .ext-summary .row b{color:#fff !important}
+  .ext-summary .row.total b{color:var(--pw-brand-glow) !important}
+  .ext-confirm{
+    background:linear-gradient(135deg,var(--pw-brand),var(--pw-brand-light)) !important;
+    color:#fff !important;
+  }
+  .ext-confirm:hover{background:linear-gradient(135deg,var(--pw-brand-light),var(--pw-brand-glow)) !important}
+  .ext-cancel{color:var(--pw-text-dim) !important}
+
+  .ext-flash{
+    background:linear-gradient(135deg,var(--pw-brand-light),var(--pw-brand-glow)) !important;
+    color:#fff !important;
+    box-shadow:0 12px 28px -10px rgba(123,184,220,.6) !important;
+  }
+
+  /* ── MENU PANEL ── */
+  .menu-backdrop.show{background:rgba(0,0,0,.55) !important;backdrop-filter:blur(4px) !important}
+  .menu-panel{
+    background:var(--pw-deep-2) !important;
+    box-shadow:-12px 0 40px -10px rgba(0,0,0,.6) !important;
+  }
+  .menu-hdr{
+    background:linear-gradient(180deg,var(--pw-brand) 0%,var(--pw-brand-light) 100%) !important;
+  }
+  .menu-hdr::before{
+    background:linear-gradient(90deg,var(--pw-brand-glow) 0%,#fff 50%,var(--pw-brand-glow) 100%) !important;
+    opacity:.6;
+  }
+  .menu-hdr::after{
+    background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%) !important;
+  }
+  .menu-close{
+    background:rgba(255,255,255,.14) !important;
+    border:1px solid rgba(255,255,255,.20) !important;
+  }
+  .menu-close:hover{background:rgba(255,255,255,.24) !important}
+  .menu-avatar{
+    background:#fff !important;
+    color:var(--pw-brand) !important;
+    box-shadow:0 4px 12px -4px rgba(0,0,0,.4) !important;
+    font-size:13px !important;
+    font-weight:900 !important;
+    border:2px solid var(--pw-brand-glow) !important;
+  }
+  .menu-body{background:var(--pw-deep-1) !important}
+  .menu-section-lbl{color:var(--pw-text-faint) !important}
+  .menu-item{
+    background:var(--pw-deep-3) !important;
+    border-bottom:1px solid var(--pw-border-soft) !important;
+  }
+  .menu-item:hover{background:var(--pw-deep-4) !important}
+  .menu-item:active{background:rgba(74,143,184,.12) !important}
+  .menu-item-title{color:#fff !important}
+  .menu-item-sub{color:var(--pw-text-dim) !important}
+  .menu-item-chev{color:var(--pw-text-faint) !important}
+
+  .menu-item-ico.activity{background:rgba(74,143,184,.18) !important;color:var(--pw-brand-glow) !important}
+  .menu-item-ico.payment{background:rgba(123,184,220,.16) !important;color:var(--pw-brand-glow) !important}
+  .menu-item-ico.passes{background:rgba(34,197,94,.12) !important;color:#4ADE80 !important}
+  .menu-item-ico.vehicles{background:rgba(168,212,237,.14) !important;color:#A8D4ED !important}
+  .menu-item-ico.settings{background:rgba(99,102,241,.14) !important;color:#A5B4FC !important}
+  .menu-item-ico.help{background:rgba(139,92,246,.14) !important;color:#C4B5FD !important}
+
+  .menu-signout{background:var(--pw-deep-1) !important}
+  .menu-signout button{
+    background:var(--pw-deep-3) !important;
+    color:var(--pw-text) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .menu-signout button:hover{background:var(--pw-deep-4) !important;color:#fff !important}
+  .menu-signout .legal{color:var(--pw-text-faint) !important}
+  .menu-signout .legal a{color:var(--pw-brand-glow) !important}
+
+  /* Menu section pages */
+  .menu-section{background:var(--pw-deep-2) !important}
+  .menu-section .sec-back-btn{
+    background:rgba(255,255,255,.14) !important;
+    border:1px solid rgba(255,255,255,.20) !important;
+    color:#fff !important;
+  }
+  .menu-section .sec-back-btn:hover{background:rgba(255,255,255,.24) !important}
+  .menu-section .sec-body{background:var(--pw-deep-1) !important}
+
+  /* Section content elements */
+  .act-item{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.2) !important;
+  }
+  .act-ic{
+    background:rgba(74,143,184,.18) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .act-info b{color:#fff !important}
+  .act-info small{color:var(--pw-text-dim) !important}
+  .act-amt{color:#fff !important}
+
+  .pm-row{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .pm-row .pm-info b{color:#fff !important}
+  .pm-row .pm-info small{color:var(--pw-text-dim) !important}
+  .pm-row .pm-primary-tag{
+    background:rgba(74,143,184,.20) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .pm-add{
+    background:var(--pw-deep-3) !important;
+    border:1.5px dashed var(--pw-border) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+  .pm-add:hover{border-color:var(--pw-brand-light) !important;background:var(--pw-deep-4) !important}
+
+  .veh-row{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .veh-plate{
+    background:linear-gradient(180deg,#fff,#dde9f3) !important;
+    color:#0c1117 !important;
+    border:1.5px solid var(--pw-brand-light) !important;
+  }
+  .veh-info b{color:#fff !important}
+  .veh-info small{color:var(--pw-text-dim) !important}
+  .veh-primary-tag{
+    background:rgba(74,143,184,.20) !important;
+    color:var(--pw-brand-glow) !important;
+  }
+
+  .set-grp{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .set-row{border-bottom:1px solid var(--pw-border-soft) !important}
+  .set-row .set-lbl{color:#fff !important}
+  .set-row .set-val{color:var(--pw-text-dim) !important}
+  .set-row .toggle{background:var(--pw-brand) !important}
+  .set-row .toggle.off{background:var(--pw-deep-4) !important}
+
+  .help-q{
+    background:var(--pw-deep-3) !important;
+    border:1px solid var(--pw-border) !important;
+  }
+  .help-q b{color:#fff !important}
+  .help-q span{color:var(--pw-text-dim) !important}
+  .help-contact{
+    background:linear-gradient(135deg,var(--pw-brand),var(--pw-brand-light)) !important;
+    color:#fff !important;
+    box-shadow:0 6px 16px -6px rgba(74,143,184,.55) !important;
+  }
+  .sec-empty{color:var(--pw-text-dim) !important}
+  .sec-empty svg{color:var(--pw-text-faint) !important}
+
+  /* S2P pill in URL bar — change from old gold to brand glow */
+  .preview-bar span{color:var(--pw-brand-glow) !important}
+
+
+  /* ACTIVE badge inside timer card */
+  .timer-badge{
+    position:absolute;top:14px;right:14px;z-index:5;
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.16);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.22);
+    color:#fff;font-size:9.5px;font-weight:800;
+    padding:5px 10px 5px 8px;
+    border-radius:999px;
+    letter-spacing:.14em;text-transform:uppercase;
+    box-shadow:0 4px 12px -4px rgba(0,0,0,.30);
+  }
+  .timer-badge-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:#22c55e;
+    box-shadow:0 0 8px rgba(34,197,94,.7);
+    animation:badge-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes badge-pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.55;transform:scale(.75)}
+  }
+
+  /* Hide the duplicate Active pill from brand row + push hamburger right */
+  .sess-brand .badge-active{display:none !important}
+  .sess-brand .ham-btn{margin-left:auto !important}
+
+</style>
+</head>
+<body data-theme="dark">
+
+<div>
+  <div class="preview-bar">
+    <div class="url">parkwell.app/pay/den-1825-market</div>
+    <span style="font-size:10px;color:var(--pr-gold);font-weight:700;letter-spacing:.14em">S2P</span>
+  </div>
+
+  <div class="device">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="status-bar">
+        <span class="time">7:59</span>
+        <span class="right">5G <span class="battery"><span class="lvl"></span></span></span>
+      </div>
+
+      <div class="app">
+
+        <div id="payForm">
+
+        <!-- HEADER -->
+        <div class="header">
+          <div class="brand">
+            <div class="mark">
+              <img class="pw-mark" alt="Parkwell" src="data:image/png;base64,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" />
+            </div>
+            <div>
+              <div class="name sm-name"><span class="sm-city">parkwell</span></div>
+            </div>
+          </div>
+          <button class="icon-btn" title="Help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 5 0c0 1.5-2.5 2-2.5 4"/><circle cx="12" cy="17" r=".8" fill="currentColor"/></svg>
+          </button>
+        </div>
+
+        <!-- LOT -->
+        <div class="lot-card">
+          <div class="pin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="info">
+            <h1>Parkwell Garage · Downtown</h1>
+            <div class="addr">1825 Market Street<br/>Denver, CO 80202</div>
+          </div>
+        </div>
+
+        <!-- 1. PLATE -->
+        <div class="field-block">
+          <div class="lbl">License Plate Number <span class="req">*</span></div>
+          <div class="plate-card">
+            <button class="state" id="stateBtn">CA</button>
+            <input type="text" class="plate-input" id="plateNum" placeholder="ABC1234" maxlength="8" autocapitalize="characters" />
+            <button class="scan-btn" id="scanBtn" title="Scan plate">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. PHONE (mandatory) -->
+        <div class="field-block">
+          <div class="lbl">Phone Number <span class="req">*</span></div>
+          <div class="phone-card">
+            <button class="country"><span class="flag">🇺🇸</span><span>+1</span></button>
+            <input type="tel" id="phoneNum" placeholder="(555) 123-4567" />
+          </div>
+        </div>
+
+        <!-- 3. DURATION SLIDER -->
+        <div class="dur-section">
+          <div class="dur-head">
+            <h3>Select Duration <span class="req">*</span></h3>
+            <div>
+              <div class="pricetag"><span class="currency">$</span><span id="priceMain">15</span><span class="cents-wrap" style="font-size:14px;color:var(--text-dim);font-weight:600"><span class="cents-dot">.</span><span id="priceCents">00</span></span></div>
+            </div>
+          </div>
+
+          <div class="dur-card">
+            <div class="dur-display">
+              <div class="big" id="durBig">1h 00m</div>
+              <div class="lbl">Duration</div>
+              <div class="ends">Ends at <b id="endsAt">8:59 PM</b></div>
+            </div>
+
+            <div class="slider-wrap">
+              <div class="slider-track">
+                <div class="slider-rail"><div class="slider-fill" id="sliderFill"></div></div>
+                <div class="free-zone" id="freeZone"></div>
+                <div class="slider-ticks" id="sliderTicks"></div>
+                <input type="range" class="slider" id="durSlider" min="0" max="31" value="4" step="1" />
+              </div>
+              <div class="slider-labels">
+                <span>Free</span><span>1 h</span><span>4 h</span><span>All Day</span><span>Overnight</span>
+              </div>
+            </div>
+
+            <div class="quick-chips">
+              <div class="chip-wrap">
+                <span class="free-pill">FREE</span>
+                <button class="chip" data-step="2">30 min</button>
+              </div>
+              <button class="chip on" data-step="4">1 hour</button>
+              <button class="chip" data-step="8">2 hours</button>
+              <button class="chip" data-step="16">4 hours</button>
+              <button class="chip" data-step="30">All Day</button>
+              <button class="chip" data-step="31">Overnight</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 5. PROMO -->
+        <div class="promo">
+          <div class="sublabel">Promo or Validation Code <span class="opt">(optional)</span></div>
+          <div class="promo-card">
+            <input type="text" id="promoCode" placeholder="Enter code" />
+            <button id="applyBtn" onclick="applyPromo()">Apply</button>
+          </div>
+          <div class="promo-msg" id="promoMsg"></div>
+        </div>
+
+        <!-- RECEIPT -->
+        <div class="receipt">
+          <div class="rrow"><span>Parking</span><span id="rSub">$15.00</span></div>
+          <div class="rrow discount" id="rDiscRow" style="display:none"><span>Discount <span id="rDiscCode" style="color:var(--muted)"></span></span><span id="rDisc">−$0.00</span></div>
+          <div class="rrow"><span>Service Fee</span><span id="rSvc">$0.59</span></div>
+          <div class="rrow total"><span>Total</span><span id="rTotal">$15.59</span></div>
+        </div>
+
+        <!-- WALLET PAY (Apple/Google) -->
+        <div class="wallet-row">
+          <button class="wallet-btn apple" id="applePayBtn" disabled>
+            <span class="applepay-mark"><span class="apple-logo">&#xF8FF;</span> Pay</span>
+          </button>
+          <button class="wallet-btn google" id="googlePayBtn" disabled>
+            <span class="gp-mark">
+              <span class="g-blue">G</span><span class="g-red">o</span><span class="g-yellow">o</span><span class="g-blue">g</span><span class="g-green">l</span><span class="g-red">e</span>&nbsp;Pay
+            </span>
+          </button>
+        </div>
+
+        <div class="or-divider">or pay with card</div>
+
+        <!-- MAIN PAY BUTTON -->
+        <button class="pay" id="payBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+          <span id="payText">Enter plate &amp; phone to continue</span>
+        </button>
+
+        <div class="secure-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Secure payment · Parkwell
+        </div>
+
+        </div><!-- /#payForm -->
+
+        <!-- ════════════════════════════════════════════════════════════
+             SESSION ACTIVE VIEW (hidden until payment completes)
+             ════════════════════════════════════════════════════════════ -->
+        <div class="session-view" id="sessionView">
+          <!-- Brand header (slim) -->
+          <div class="sess-brand">
+            <div class="mark-mini">
+              <img class="pw-mark-mini" alt="Parkwell" src="data:image/png;base64,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" />
+            </div>
+            <div>
+              <div class="name sm-name"><span class="sm-city">parkwell</span></div>
+            </div>
+            <span class="badge-active">Active</span>
+            <button class="ham-btn" id="hamBtn" onclick="openSessMenu()" aria-label="Open account menu">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
+
+          <!-- Timer card with progress ring -->
+          <div class="timer-card" id="timerCard">
+            <div class="timer-badge"><span class="timer-badge-dot"></span>ACTIVE</div>
+            <div class="timer-ring-wrap">
+              <div class="timer-ring">
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="108"/>
+                  <circle class="progress" id="timerProgress" cx="120" cy="120" r="108" stroke-dasharray="678.58" stroke-dashoffset="0"/>
+                </svg>
+                <div class="center-content">
+                  <div class="center-head" id="timerHead">Time Remaining</div>
+                  <div class="countdown">
+                    <div>
+                      <div class="num" id="timerH">00</div>
+                      <div class="num-lbl">hrs</div>
+                    </div>
+                    <div class="colon">:</div>
+                    <div>
+                      <div class="num" id="timerM">59</div>
+                      <div class="num-lbl">min</div>
+                    </div>
+                    <div class="colon">:</div>
+                    <div>
+                      <div class="num" id="timerS">59</div>
+                      <div class="num-lbl">sec</div>
+                    </div>
+                  </div>
+                  <div class="pct" id="timerPct">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></svg>
+                    <span id="timerPctText">100% remaining</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="expires-strip">
+              <div class="col">Started
+                <b id="sessStartTime">—</b>
+                <small id="sessStartDate">—</small>
+              </div>
+              <div class="col" style="text-align:right">Expires
+                <b id="sessEndTime">—</b>
+                <small id="sessEndDate">—</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action buttons (placed directly under timer for fast access) -->
+          <div class="session-actions">
+            <button class="extend-btn" onclick="openExtendSheet()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M19 4l3 3M22 4l-3 3"/></svg>
+              Extend session
+            </button>
+          </div>
+
+          <!-- Plate display -->
+          <div class="session-plate-card">
+            <div class="plate-display" id="sessPlate">ABC1234</div>
+            <div class="plate-meta">
+              <b id="sessPlateState">California</b>
+              <small>1 active session</small>
+            </div>
+          </div>
+
+          <!-- Detail rows -->
+          <div class="session-detail-card">
+            <div class="sess-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+              <div class="lbl"><small>Location</small><b>Parkwell · 1825 Market St, Denver</b></div>
+            </div>
+            <div class="sess-row">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg></div>
+              <div class="lbl"><small>Duration</small><b id="sessDuration">1 hour</b></div>
+              <div class="right" id="sessAmtPaid">$15.59</div>
+            </div>
+            <div class="sess-row">
+              <div class="ic" id="sessPmtIcon" style="background:transparent;padding:0">
+                <div class="card-brand visa" id="sessCardBrand">VISA</div>
+              </div>
+              <div class="lbl"><small>Payment</small><b id="sessPmtLabel">Visa ending 4242</b></div>
+              <div class="right" id="sessConf">PR-A4F2K9</div>
+            </div>
+          </div>
+
+          <!-- Transaction history -->
+          <div class="tx-section">
+            <h4>Transactions</h4>
+            <div class="tx-list" id="txList">
+              <!-- populated by JS -->
+            </div>
+          </div>
+
+          <div class="secure-note" style="margin-top:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Parkwell · Need help? Tap support.
+          </div>
+        </div>
+      </div>
+
+      <!-- Scan modal -->
+      <div class="scan-modal" id="scanModal">
+        <h3>Point camera at your plate</h3>
+        <div class="frame">
+          <div class="scan-line"></div>
+          <div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-family:ui-monospace;font-size:9px;letter-spacing:.18em">SCANNING…</div>
+        </div>
+        <p>Hold steady and align the plate inside the frame.</p>
+        <button class="cancel" id="cancelScan">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Home indicator pinned to device (does not scroll) -->
+    <div class="home-ind"></div>
+
+    <!-- ────────────────────────────────────────────────────────
+         Overlays anchored to .device (do not scroll with .screen)
+         ──────────────────────────────────────────────────────── -->
+    <!-- Payment processing overlay -->
+    <div class="pay-overlay" id="payOverlay">
+      <div id="payOverlayContent">
+        <div class="pay-spinner"></div>
+        <h2 id="payTitle">Processing payment</h2>
+        <p id="paySub">Securely contacting your card issuer…</p>
+      </div>
+    </div>
+
+    <!-- Extend session bottom sheet -->
+    <div class="ext-backdrop" id="extBackdrop" onclick="closeExtendSheet()"></div>
+    <div class="ext-sheet" id="extSheet">
+      <div class="ext-handle"></div>
+      <h3>Extend session</h3>
+      <div class="ext-sub">Add more time to your active parking session. Charged to the same card on file.</div>
+
+      <div class="ext-options" id="extOptions">
+        <button class="ext-opt" data-mins="15"><b>15 min</b><small>+$1.50</small></button>
+        <button class="ext-opt on" data-mins="30"><b>30 min</b><small>+$1.50</small></button>
+        <button class="ext-opt" data-mins="60"><b>1 hour</b><small>+$3.00</small></button>
+        <button class="ext-opt" data-mins="120"><b>2 hours</b><small>+$6.00</small></button>
+        <button class="ext-opt" data-mins="240"><b>4 hours</b><small>+$12.00</small></button>
+        <button class="ext-opt" data-mins="660"><b>All Day</b><small>+$33.00</small></button>
+      </div>
+
+      <div class="ext-summary">
+        <div class="row"><span>Extension cost</span><b id="extCost">$1.50</b></div>
+        <div class="row"><span>Service fee</span><b>$0.59</b></div>
+        <div class="row total"><span>New total charge</span><b id="extTotal">$2.09</b></div>
+        <div class="row" style="font-size:11.5px;color:#94a3b8;margin-top:2px"><span>New expiration</span><span id="extNewExpire" style="color:var(--pr-navy);font-weight:600">—</span></div>
+      </div>
+
+      <button class="ext-confirm" id="extConfirmBtn" onclick="confirmExtend()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Confirm &amp; charge <span id="extConfirmAmt">$2.09</span>
+      </button>
+      <button class="ext-cancel" onclick="closeExtendSheet()">Cancel</button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         SESSION MENU (slide-in from right, only visible after pay)
+         ════════════════════════════════════════════════════════ -->
+    <div class="menu-backdrop" id="menuBackdrop" onclick="closeSessMenu()"></div>
+
+    <div class="menu-panel" id="menuPanel">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="menu-close" onclick="closeSessMenu()" aria-label="Close menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div class="menu-hdr-title">My Account</div>
+          <div class="menu-avatar">G</div>
+        </div>
+      </div>
+      <div class="menu-body">
+        <div class="menu-section-lbl">Manage</div>
+        <button class="menu-item" onclick="openSecPage('activity')">
+          <div class="menu-item-ico activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Activity</span>
+            <span class="menu-item-sub">5 recent sessions · $42.18</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <button class="menu-item" onclick="openSecPage('payment')">
+          <div class="menu-item-ico payment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Payment</span>
+            <span class="menu-item-sub">Visa •••• 4242 · Primary</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <button class="menu-item" onclick="openSecPage('passes')">
+          <div class="menu-item-ico passes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M3 7l9-4 9 4"/><path d="M3 11h18"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Monthly Passes</span>
+            <span class="menu-item-sub">3 garages · Save up to 30%</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <button class="menu-item" onclick="openSecPage('vehicles')">
+          <div class="menu-item-ico vehicles">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17v-5l2-4h10l2 4v5"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Vehicles</span>
+            <span class="menu-item-sub">2 saved · ABC1234 is primary</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <div class="menu-section-lbl">Account</div>
+
+        <button class="menu-item" onclick="openSecPage('settings')">
+          <div class="menu-item-ico settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Settings</span>
+            <span class="menu-item-sub">Notifications, language, security</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <button class="menu-item" onclick="openSecPage('help')">
+          <div class="menu-item-ico help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="menu-item-txt">
+            <span class="menu-item-title">Help &amp; Support</span>
+            <span class="menu-item-sub">FAQ · Contact Parkwell support</span>
+          </div>
+          <svg class="menu-item-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </button>
+
+        <div class="menu-signout">
+          <button onclick="closeSessMenu()">Sign out</button>
+          <div class="legal">Parkwell · parkwell.app<br/>v2.4 · <a href="#">Privacy</a> · <a href="#">Terms</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION PAGES — slide in over menu when a nav item is tapped -->
+    <div class="menu-section" id="sec-activity">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Activity</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="act-item">
+          <div class="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="act-info"><b>Parkwell · 1825 Market St</b><small>Today · 1h 0m · ABC1234</small></div>
+          <div class="act-amt" id="actCurAmt">$15.59</div>
+        </div>
+        <div class="act-item">
+          <div class="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="act-info"><b>Parkwell · Gaslamp</b><small>May 12, 2026 · 3h 30m</small></div>
+          <div class="act-amt">$10.59</div>
+        </div>
+        <div class="act-item">
+          <div class="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="act-info"><b>Parkwell · East Village</b><small>May 4, 2026 · 2h 15m</small></div>
+          <div class="act-amt">$6.59</div>
+        </div>
+        <div class="act-item">
+          <div class="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="act-info"><b>Parkwell · Little Italy</b><small>Apr 28, 2026 · 4h 0m</small></div>
+          <div class="act-amt">$12.59</div>
+        </div>
+        <div class="act-item">
+          <div class="act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="act-info"><b>Parkwell · Marina</b><small>Apr 14, 2026 · 1h 45m</small></div>
+          <div class="act-amt">$4.59</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-section" id="sec-payment">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Payment Methods</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="pm-row">
+          <div class="card-brand visa">VISA</div>
+          <div class="pm-info"><b>Visa •••• 4242</b><small>Expires 08 / 27</small></div>
+          <span class="pm-primary-tag">Primary</span>
+        </div>
+        <div class="pm-row">
+          <div class="card-brand mc"></div>
+          <div class="pm-info"><b>Mastercard •••• 5419</b><small>Expires 03 / 28</small></div>
+        </div>
+        <div class="pm-row">
+          <div class="card-brand applepay"></div>
+          <div class="pm-info"><b>Apple Pay</b><small>Touch ID enabled</small></div>
+        </div>
+        <button class="pm-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add new payment method
+        </button>
+      </div>
+    </div>
+
+    <div class="menu-section" id="sec-passes">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Monthly Passes</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="sec-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M3 7l9-4 9 4"/><path d="M3 11h18"/></svg>
+          No active monthly passes<br/>
+          <span style="font-size:11px;font-weight:500;color:#cbd5e1">Save up to 30% with a monthly pass — available at parkwell.app</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-section" id="sec-vehicles">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Vehicles</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="veh-row">
+          <div class="veh-plate">ABC1234</div>
+          <div class="veh-info"><b>2022 Toyota Prius</b><small>White · California</small></div>
+          <span class="veh-primary-tag">Primary</span>
+        </div>
+        <div class="veh-row">
+          <div class="veh-plate">8KCM947</div>
+          <div class="veh-info"><b>2019 Tesla Model 3</b><small>Blue · California</small></div>
+        </div>
+        <button class="pm-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add a vehicle
+        </button>
+      </div>
+    </div>
+
+    <div class="menu-section" id="sec-settings">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Settings</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="menu-section-lbl" style="padding:0 0 6px">Notifications</div>
+        <div class="set-grp">
+          <div class="set-row"><div class="set-lbl">Session expiring alerts</div><div class="toggle" onclick="this.classList.toggle('off')"></div></div>
+          <div class="set-row"><div class="set-lbl">Payment receipts</div><div class="toggle" onclick="this.classList.toggle('off')"></div></div>
+          <div class="set-row"><div class="set-lbl">Promotions &amp; updates</div><div class="toggle off" onclick="this.classList.toggle('off')"></div></div>
+        </div>
+        <div class="menu-section-lbl" style="padding:0 0 6px">Account</div>
+        <div class="set-grp">
+          <div class="set-row"><div class="set-lbl">Email</div><div class="set-val">g***@gmail.com</div></div>
+          <div class="set-row"><div class="set-lbl">Phone</div><div class="set-val">(555) 234-5678</div></div>
+          <div class="set-row"><div class="set-lbl">Language</div><div class="set-val">English</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-section" id="sec-help">
+      <div class="menu-hdr">
+        <div class="menu-hdr-row">
+          <button class="sec-back-btn" onclick="closeSecPage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Menu
+          </button>
+          <div class="menu-hdr-title">Help &amp; Support</div>
+          <div style="width:30px"></div>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="menu-section-lbl" style="padding:0 0 6px">Common questions</div>
+        <div class="help-q"><b>How do I extend my session?</b><span>Tap the "Extend" button on your active session to add more time.</span></div>
+        <div class="help-q"><b>Where do I find my receipt?</b><span>Receipts are emailed automatically and saved under Activity.</span></div>
+        <div class="help-q"><b>Refund policy</b><span>Sessions ending within 5 minutes of purchase qualify for a full refund.</span></div>
+        <button class="help-contact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Contact Parkwell Support
+        </button>
+      </div>
+    </div>
+
+    <!-- Time-extended flash -->
+    <div class="ext-flash" id="extFlash">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="extFlashText">+30 min added</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── Slider model ── */
+  /* New pricing model:
+     - First 30 minutes: FREE
+     - Each additional 30-min block: $1.50
+     - Cap: $33.00 — represents "All Day" (parking ends at midnight, never beyond)
+     - 33 / 1.50 = 22 paid blocks of 30min = 11 paid hours
+     - Plus 30 min free = 11.5 hours total parking time at the cap
+     - Slider range: 0..30 (max 30 = "All Day" preset), step 31 = "Overnight" (only way to go past midnight)
+  */
+  const PRESETS = {
+    29: { mins:690,  label:'All Day',   kind:'allday',    endsLabel:'until midnight' },  // up to 11.5h, ends at midnight
+    30: { mins:690,  label:'All Day',   kind:'allday',    endsLabel:'until midnight' },
+    31: { mins:1080, label:'Overnight', kind:'overnight', endsLabel:'11:30 AM tomorrow' },
+  };
+  const PRESET_PRICE = { 29:33, 30:33, 31:35 };
+
+  // Free first 30 min, then $1.50 per 30-min block, max $33
+  function calcPrice(mins){
+    if (mins <= 30) return 0;
+    const paidBlocks = Math.ceil((mins - 30) / 30);
+    const price = paidBlocks * 1.50;
+    return Math.min(price, 33.00);
+  }
+
+  const CFG = {
+    serviceFee:0.59,
+    promoCodes:{
+      WELCOME10:{ type:'percent', value:10, label:'10% off' },
+      VALIDATE: { type:'flat',    value:5,  label:'$5 off (validation)' },
+      FREE2:    { type:'flat',    value:20, label:'$20 off (corporate)' },
+    }
+  };
+
+  const state = {
+    sliderStep: 4,
+    promo: null,
+  };
+
+  const fmt = n => n.toFixed(2);
+  function stepToMinutes(s){
+    if (PRESETS[s]) return PRESETS[s].mins;
+    return s * 15;  // 0=0min, 1=15min, 2=30min, ... 28=7h
+  }
+  function minutesLabel(m){
+    if (state.sliderStep === 29 || state.sliderStep === 30) return 'All Day';
+    if (state.sliderStep === 31) return 'Overnight';
+    if (m === 0) return '—';
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m/60), mm = m % 60;
+    return mm ? `${h}h ${String(mm).padStart(2,'0')}m` : `${h}h`;
+  }
+  function endsAtLabel(m){
+    if (PRESETS[state.sliderStep] && PRESETS[state.sliderStep].endsLabel) return PRESETS[state.sliderStep].endsLabel;
+    if (m === 0) return '—';
+    const baseMin = 19*60 + 59;
+    let total = baseMin + m;
+    let nextDay = total >= 24*60;
+    total = total % (24*60);
+    const h24 = Math.floor(total/60), mm = total % 60;
+    const am = h24 < 12;
+    let h12 = h24 % 12; if (h12 === 0) h12 = 12;
+    return `${h12}:${String(mm).padStart(2,'0')} ${am?'AM':'PM'}${nextDay?' tomorrow':''}`;
+  }
+  function priceForMinutes(m){
+    if (PRESETS[state.sliderStep]) return PRESET_PRICE[state.sliderStep];
+    return calcPrice(m);
+  }
+
+  function render(){
+    const m = stepToMinutes(state.sliderStep);
+    const base = priceForMinutes(m);
+    const subtotal = base;
+
+    let discount = 0;
+    if (state.promo){
+      discount = state.promo.type === 'percent' ? subtotal * state.promo.value/100 : Math.min(state.promo.value, subtotal);
+    }
+    const parkingAfterDiscount = Math.max(0, subtotal - discount);
+    // Free session: no service fee at all when parking itself is free
+    const isFree = parkingAfterDiscount <= 0.001;
+    const serviceFee = isFree ? 0 : CFG.serviceFee;
+    const total = parkingAfterDiscount + serviceFee;
+
+    // Big price display
+    const priceTag = document.querySelector('.pricetag');
+    if (isFree) {
+      document.getElementById('priceMain').textContent = 'FREE';
+      document.getElementById('priceCents').textContent = '';
+      priceTag.querySelector('.currency').style.display = 'none';
+      priceTag.querySelector('.cents-wrap').style.display = 'none';
+      priceTag.classList.add('free');
+    } else {
+      document.getElementById('priceMain').textContent = Math.floor(total);
+      document.getElementById('priceCents').textContent = String(Math.round(total*100) % 100).padStart(2,'0');
+      priceTag.querySelector('.currency').style.display = '';
+      priceTag.querySelector('.cents-wrap').style.display = '';
+      priceTag.classList.remove('free');
+    }
+
+    document.getElementById('durBig').textContent = minutesLabel(m);
+    document.getElementById('endsAt').textContent = endsAtLabel(m);
+
+    // Receipt: hide everything when free, show normally otherwise
+    const receipt = document.querySelector('.receipt');
+    if (isFree) {
+      receipt.classList.add('free');
+    } else {
+      receipt.classList.remove('free');
+      document.getElementById('rSub').textContent = '$' + fmt(base);
+      const dRow = document.getElementById('rDiscRow');
+      if (discount > 0){
+        dRow.style.display = 'flex';
+        document.getElementById('rDiscCode').textContent = '· ' + state.promo.code;
+        document.getElementById('rDisc').textContent = '−$' + fmt(discount);
+      } else dRow.style.display = 'none';
+      document.getElementById('rSvc').textContent = '$' + fmt(serviceFee);
+      document.getElementById('rTotal').textContent = '$' + fmt(total);
+    }
+
+    // Slider fill width
+    document.getElementById('sliderFill').style.width = ((state.sliderStep/31)*100) + '%';
+    // Free zone visual: when in 0-30min territory (steps 0-2), apply gold/free styling
+    const inFreeZone = state.sliderStep <= 2;
+    document.querySelector('.slider-wrap').classList.toggle('free-mode', inFreeZone);
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', parseInt(c.dataset.step,10) === state.sliderStep));
+
+    // Pay buttons enabled when plate + phone valid (demo: always clickable; auto-fills on click)
+    const plate = document.getElementById('plateNum').value.trim();
+    const phone = document.getElementById('phoneNum').value.trim();
+    const ready = plate.length >= 2 && phone.replace(/\D/g,'').length >= 7;
+    document.getElementById('payBtn').disabled = false;
+    document.getElementById('applePayBtn').disabled = false;
+    document.getElementById('googlePayBtn').disabled = false;
+    if (isFree) {
+      document.getElementById('payText').textContent = `Start parking · FREE`;
+    } else {
+      document.getElementById('payText').textContent = ready ? `Pay $${fmt(total)} with card` : `Pay $${fmt(total)} · demo`;
+    }
+  }
+
+  // Build slider ticks (0..31, with the 30-min mark = step 2 emphasized as the FREE/PAID boundary)
+  (function(){
+    const ticks = document.getElementById('sliderTicks');
+    for (let i=0; i<=31; i++){
+      const t = document.createElement('div');
+      let cls = 'tick';
+      if (i % 4 === 0) cls += ' major';
+      if (i === 2) cls += ' boundary';   // 30-min boundary tick
+      t.className = cls;
+      t.style.left = ((i/31)*100) + '%';
+      ticks.appendChild(t);
+    }
+    // Free zone overlay (covers 0..2 = 0..30min, which is 2/31 of the slider)
+    const freeZone = document.getElementById('freeZone');
+    if (freeZone) freeZone.style.width = ((2/31)*100) + '%';
+  })();
+
+  // Slider events
+  const slider = document.getElementById('durSlider');
+  slider.addEventListener('input', () => { state.sliderStep = parseInt(slider.value, 10); render(); });
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    state.sliderStep = parseInt(c.dataset.step, 10);
+    slider.value = state.sliderStep;
+    render();
+  }));
+
+  // Phone formatting
+  document.getElementById('phoneNum').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 10);
+    if (v.length > 6) v = `(${v.slice(0,3)}) ${v.slice(3,6)}-${v.slice(6)}`;
+    else if (v.length > 3) v = `(${v.slice(0,3)}) ${v.slice(3)}`;
+    else if (v.length > 0) v = `(${v}`;
+    e.target.value = v;
+    render();
+  });
+  document.getElementById('plateNum').addEventListener('input', render);
+
+  // Promo
+  function applyPromo(){
+    const inp = document.getElementById('promoCode');
+    const code = inp.value.trim().toUpperCase();
+    const msg = document.getElementById('promoMsg');
+    const btn = document.getElementById('applyBtn');
+    if (!code){ state.promo = null; msg.classList.remove('show'); btn.classList.remove('applied'); btn.textContent='Apply'; render(); return; }
+    const p = CFG.promoCodes[code];
+    if (p){
+      state.promo = { code, ...p };
+      msg.className = 'promo-msg show ok';
+      msg.innerHTML = '✓ ' + p.label + ' applied';
+      btn.classList.add('applied'); btn.textContent='Applied';
+    } else {
+      state.promo = null;
+      msg.className = 'promo-msg show err';
+      msg.innerHTML = '✗ Code not valid';
+      btn.classList.remove('applied'); btn.textContent='Apply';
+    }
+    render();
+  }
+
+  // Scan modal
+  const scanModal = document.getElementById('scanModal');
+  document.getElementById('scanBtn').addEventListener('click', () => {
+    scanModal.classList.add('show');
+    setTimeout(() => {
+      document.getElementById('plateNum').value = '7ABC123';
+      scanModal.classList.remove('show');
+      render();
+    }, 1800);
+  });
+  document.getElementById('cancelScan').addEventListener('click', () => scanModal.classList.remove('show'));
+
+  // State picker stub
+  document.getElementById('stateBtn').addEventListener('click', () => {
+    const order = ['CA','NY','TX','FL','WA','OR','NV','AZ','IL','OH'];
+    const cur = document.getElementById('stateBtn').textContent.trim();
+    const idx = order.indexOf(cur);
+    document.getElementById('stateBtn').textContent = order[(idx+1) % order.length];
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // PAYMENT FLOW + ACTIVE SESSION
+  // ════════════════════════════════════════════════════════════════
+
+  // Session state — populated when payment completes
+  const session = {
+    active: false,
+    startedAt: null,         // Date
+    endsAt: null,            // Date
+    originalDurationMin: 0,  // initial purchased minutes (excluding extensions)
+    totalDurationMin: 0,     // includes extensions
+    pmtMethod: 'card',       // 'card' | 'apple' | 'google'
+    cardBrand: 'visa',       // 'visa' | 'amex' | 'mc' | 'discover'
+    cardLast4: '4242',
+    plate: 'ABC1234',
+    plateState: 'CA',
+    transactions: [],        // [{ kind, amount, time, conf, label, sub }]
+    timerInterval: null
+  };
+
+  function fmtTime(d){
+    let h = d.getHours(); const m = d.getMinutes();
+    const ampm = h < 12 ? 'AM' : 'PM';
+    h = h % 12; if (h === 0) h = 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+  function fmtDate(d){
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
+  }
+  function fmtConf(){
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let out = 'PR-';
+    for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random()*chars.length)];
+    return out;
+  }
+  function durationLabel(mins){
+    if (mins >= 60) {
+      const h = Math.floor(mins/60); const m = mins % 60;
+      return h + (h===1?' hour':' hours') + (m ? ' '+m+' min' : '');
+    }
+    return mins + ' min';
+  }
+  function stateNames(){
+    return { CA:'California', NY:'New York', TX:'Texas', AZ:'Arizona', NV:'Nevada', WA:'Washington', OR:'Oregon', FL:'Florida' };
+  }
+
+  // Pick a card brand from a fake card number — also drives the displayed digit pattern
+  // For demo: rotate so each fresh page gives a different brand
+  const DEMO_CARDS = [
+    { brand:'visa',     last4:'4242', label:'Visa' },
+    { brand:'amex',     last4:'1005', label:'American Express' },
+    { brand:'mc',       last4:'8821', label:'Mastercard' },
+    { brand:'discover', last4:'7711', label:'Discover' }
+  ];
+
+  function processPay(method){
+    // If demo data is missing, fill it
+    const plateInput = document.getElementById('plateNum');
+    const phoneInput = document.getElementById('phoneNum');
+    if (!plateInput.value.trim()) plateInput.value = 'ABC1234';
+    if (!phoneInput.value.trim()) phoneInput.value = '(555) 234-5678';
+    render();  // re-enable buttons
+
+    // Compute current selection
+    const mins = stepToMinutes(state.sliderStep);
+    const base = priceForMinutes(mins);
+    const discount = state.promo ? (state.promo.type === 'percent' ? base*state.promo.value/100 : Math.min(state.promo.value, base)) : 0;
+    const parkingAfterDiscount = Math.max(0, base - discount);
+    const isFree = parkingAfterDiscount <= 0.001;
+    const serviceFee = isFree ? 0 : CFG.serviceFee;
+    const total = parkingAfterDiscount + serviceFee;
+
+    // Pick payment method details (or none if free)
+    let pmt;
+    if (isFree) {
+      pmt = { method:'free', brand:'free', last4:'', label:'No payment required' };
+    } else if (method === 'apple') {
+      pmt = { method:'apple', brand:'applepay', last4:'4242', label:'Apple Pay · Visa 4242' };
+    } else if (method === 'google') {
+      pmt = { method:'google', brand:'gpay', last4:'8821', label:'Google Pay · Mastercard 8821' };
+    } else {
+      const card = DEMO_CARDS[Math.floor(Math.random()*DEMO_CARDS.length)];
+      pmt = { method:'card', brand:card.brand, last4:card.last4, label:card.label + ' ending ' + card.last4 };
+    }
+
+    // Show overlay (different copy for free vs paid)
+    showProcessing(method, isFree);
+
+    // Simulate processor latency (shorter for free since no real card flow)
+    const procDelay = isFree ? 900 : 1700;
+    setTimeout(() => {
+      showProcessingSuccess(total, isFree);
+      setTimeout(() => {
+        startSession({
+          plate: plateInput.value.trim().toUpperCase(),
+          plateState: document.getElementById('stateBtn').textContent,
+          durationMin: mins,
+          amount: total,
+          pmt: pmt
+        });
+        hideProcessing();
+      }, 1100);
+    }, procDelay);
+  }
+
+  function showProcessing(method, isFree){
+    const overlay = document.getElementById('payOverlay');
+    const content = document.getElementById('payOverlayContent');
+    if (isFree) {
+      content.innerHTML =
+        '<div class="pay-spinner"></div>' +
+        '<h2>Starting your session</h2>' +
+        '<p>Validating your plate…</p>';
+    } else {
+      const methodLabel = method === 'apple' ? 'Apple Pay' : method === 'google' ? 'Google Pay' : 'card';
+      content.innerHTML =
+        '<div class="pay-spinner"></div>' +
+        '<h2>Processing payment</h2>' +
+        '<p>Securely contacting your '+methodLabel+' issuer…</p>';
+    }
+    overlay.classList.add('show');
+  }
+  function showProcessingSuccess(amount, isFree){
+    const content = document.getElementById('payOverlayContent');
+    if (isFree) {
+      content.innerHTML =
+        '<div class="success-circle">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+        '</div>' +
+        '<h2>Session confirmed</h2>' +
+        '<div class="success-amt free">FREE</div>' +
+        '<p>Starting your 30-minute session…</p>';
+    } else {
+      content.innerHTML =
+        '<div class="success-circle">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+        '</div>' +
+        '<h2>Payment confirmed</h2>' +
+        '<div class="success-amt">$'+amount.toFixed(2)+'</div>' +
+        '<p>Starting your session…</p>';
+    }
+  }
+  function hideProcessing(){
+    document.getElementById('payOverlay').classList.remove('show');
+  }
+
+  function startSession({ plate, plateState, durationMin, amount, pmt }){
+    const now = new Date();
+    const ends = new Date(now.getTime() + durationMin*60000);
+    session.active = true;
+    session.startedAt = now;
+    session.endsAt = ends;
+    session.originalDurationMin = durationMin;
+    session.totalDurationMin = durationMin;
+    session.pmtMethod = pmt.method;
+    session.cardBrand = pmt.brand;
+    session.cardLast4 = pmt.last4;
+    session.plate = plate || 'ABC1234';
+    session.plateState = plateState || 'CA';
+    session.transactions = [{
+      kind:'session',
+      amount: amount,
+      time: now,
+      conf: fmtConf(),
+      label: 'Initial parking session',
+      sub: durationLabel(durationMin) + ' · ' + (pmt.label || 'Card')
+    }];
+
+    // Switch view
+    document.querySelector('.app').classList.add('session-active');
+
+    // Populate
+    populateSessionView();
+
+    // Start countdown
+    if (session.timerInterval) clearInterval(session.timerInterval);
+    session.timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Scroll to top of session view
+    const screen = document.querySelector('.screen');
+    if (screen) screen.scrollTop = 0;
+  }
+
+  function populateSessionView(){
+    // Plate
+    document.getElementById('sessPlate').textContent = session.plate;
+    const states = stateNames();
+    document.getElementById('sessPlateState').textContent = states[session.plateState] || session.plateState;
+
+    // Times
+    document.getElementById('sessStartTime').textContent = fmtTime(session.startedAt);
+    document.getElementById('sessStartDate').textContent = fmtDate(session.startedAt);
+    document.getElementById('sessEndTime').textContent = fmtTime(session.endsAt);
+    document.getElementById('sessEndDate').textContent = fmtDate(session.endsAt);
+
+    // Duration & amount paid (sum of transactions)
+    document.getElementById('sessDuration').textContent = durationLabel(session.totalDurationMin);
+    const totalPaid = session.transactions.reduce((s,t) => s + t.amount, 0);
+    const amtEl = document.getElementById('sessAmtPaid');
+    if (totalPaid <= 0.001) {
+      amtEl.textContent = 'FREE';
+      amtEl.classList.add('amt-free');
+    } else {
+      amtEl.textContent = '$' + totalPaid.toFixed(2);
+      amtEl.classList.remove('amt-free');
+    }
+
+    // Payment method icon
+    const iconBox = document.getElementById('sessPmtIcon');
+    iconBox.innerHTML = renderCardBrand(session.cardBrand);
+    document.getElementById('sessPmtLabel').textContent = renderPmtLabel();
+
+    // Confirmation = first transaction's
+    document.getElementById('sessConf').textContent = session.transactions[0].conf;
+
+    // Render transactions
+    renderTransactions();
+  }
+
+  function renderCardBrand(brand){
+    if (brand === 'free')     return '<div class="card-brand free">FREE</div>';
+    if (brand === 'visa')     return '<div class="card-brand visa">VISA</div>';
+    if (brand === 'amex')     return '<div class="card-brand amex">AMEX</div>';
+    if (brand === 'mc')       return '<div class="card-brand mc"></div>';
+    if (brand === 'discover') return '<div class="card-brand discover">DISC</div>';
+    if (brand === 'applepay') return '<div class="card-brand applepay">\uF8FF Pay</div>';
+    if (brand === 'gpay')     return '<div class="card-brand gpay">G Pay</div>';
+    return '<div class="card-brand">CARD</div>';
+  }
+  function renderPmtLabel(){
+    const map = { visa:'Visa', amex:'American Express', mc:'Mastercard', discover:'Discover' };
+    if (session.pmtMethod === 'free') return 'No payment required';
+    if (session.pmtMethod === 'apple') return 'Apple Pay · Visa ' + session.cardLast4;
+    if (session.pmtMethod === 'google') return 'Google Pay · Mastercard ' + session.cardLast4;
+    return (map[session.cardBrand] || 'Card') + ' ending ' + session.cardLast4;
+  }
+
+  function renderTransactions(){
+    const list = document.getElementById('txList');
+    list.innerHTML = session.transactions.map(t => {
+      const isExt = t.kind === 'extension';
+      const ic = isExt
+        ? '<div class="tx-ic extend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M19 4l3 3M22 4l-3 3"/></svg></div>'
+        : '<div class="tx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 12-8 12S4 17 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>';
+      const isFreeTx = t.amount <= 0.001;
+      const amtBlock = isFreeTx
+        ? '<div class="tx-amt amt-free">FREE<small>no charge</small></div>'
+        : '<div class="tx-amt">$'+t.amount.toFixed(2)+'<small>charged</small></div>';
+      return '<div class="tx-row">' +
+        ic +
+        '<div class="tx-info"><b>'+t.label+'</b><small>'+t.sub+' · '+fmtTime(t.time)+'</small><span class="conf">'+t.conf+'</span></div>' +
+        amtBlock +
+      '</div>';
+    }).join('');
+  }
+
+  function updateTimer(){
+    if (!session.active || !session.endsAt) return;
+    const now = new Date();
+    let diff = Math.floor((session.endsAt - now) / 1000);
+    const card = document.getElementById('timerCard');
+    if (diff <= 0) {
+      diff = 0;
+      document.getElementById('timerHead').textContent = 'Session expired';
+      card.classList.add('expiring');
+      clearInterval(session.timerInterval);
+    } else {
+      const totalSeconds = session.totalDurationMin * 60;
+      const elapsed = totalSeconds - diff;
+      const pct = (diff / totalSeconds) * 100;
+      // Progress ring (circumference 2π × 108 ≈ 678.58)
+      const circ = 678.58;
+      document.getElementById('timerProgress').style.strokeDashoffset = circ * (1 - pct/100);
+      document.getElementById('timerPctText').textContent = Math.round(pct) + '% remaining';
+      // Switch to expiring style if <5 min
+      card.classList.toggle('expiring', diff < 300);
+      document.getElementById('timerHead').textContent = diff < 300 ? 'Expiring soon' : 'Time Remaining';
+    }
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+    document.getElementById('timerH').textContent = String(hours).padStart(2,'0');
+    document.getElementById('timerM').textContent = String(minutes).padStart(2,'0');
+    document.getElementById('timerS').textContent = String(seconds).padStart(2,'0');
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // EXTEND SESSION
+  // ════════════════════════════════════════════════════════════════
+  let extSelectedMins = 30;
+
+  // Extension pricing: same model as initial session — $1.50 per 30-min block, capped at $33
+  // (no free buffer: users have already used their initial allotment)
+  function calcExtendPrice(mins){
+    const blocks = Math.ceil(mins / 30);
+    const price = blocks * 1.50;
+    return Math.min(price, 33.00);
+  }
+
+  window.openExtendSheet = function(){
+    extSelectedMins = 30;
+    document.querySelectorAll('.ext-opt').forEach(o => {
+      const m = parseInt(o.dataset.mins,10);
+      o.classList.toggle('on', m === 30);
+      // Update the small "+$X.XX" label inside each chip to match the new pricing
+      const small = o.querySelector('small');
+      if (small) small.textContent = '+$' + calcExtendPrice(m).toFixed(2);
+    });
+    updateExtSummary();
+    document.getElementById('extBackdrop').classList.add('show');
+    document.getElementById('extSheet').classList.add('show');
+  };
+  window.closeExtendSheet = function(){
+    document.getElementById('extBackdrop').classList.remove('show');
+    document.getElementById('extSheet').classList.remove('show');
+  };
+  window.confirmExtend = function(){
+    const mins = extSelectedMins;
+    const price = calcExtendPrice(mins);
+    const total = price + CFG.serviceFee;
+
+    // If the original session was FREE (no card on file), assign a card now —
+    // since extensions are paid, the payment row should reflect the card used.
+    let cardJustAdded = false;
+    if (session.pmtMethod === 'free') {
+      const card = DEMO_CARDS[Math.floor(Math.random() * DEMO_CARDS.length)];
+      session.pmtMethod = 'card';
+      session.cardBrand = card.brand;
+      session.cardLast4 = card.last4;
+      cardJustAdded = true;
+    }
+
+    // Update session
+    session.totalDurationMin += mins;
+    session.endsAt = new Date(session.endsAt.getTime() + mins*60000);
+
+    // Build the sub-line for the new transaction
+    const cardLabel = renderPmtLabel();  // e.g. "Visa ending 4242"
+    session.transactions.push({
+      kind:'extension',
+      amount: total,
+      time: new Date(),
+      conf: fmtConf(),
+      label: 'Session extended (+'+durationLabel(mins)+')',
+      sub: 'New expiration ' + fmtTime(session.endsAt) + ' · ' + cardLabel
+    });
+
+    // Re-populate (this picks up the new card brand on the payment row)
+    populateSessionView();
+    updateTimer();
+    closeExtendSheet();
+
+    // Flash banner — note when a new card was attached
+    const flash = document.getElementById('extFlash');
+    const flashText = cardJustAdded
+      ? '+' + durationLabel(mins) + ' added · ' + cardLabel
+      : '+' + durationLabel(mins) + ' added';
+    document.getElementById('extFlashText').textContent = flashText;
+    flash.classList.remove('show');
+    void flash.offsetWidth;  // restart animation
+    flash.classList.add('show');
+  };
+
+  function updateExtSummary(){
+    const price = calcExtendPrice(extSelectedMins);
+    const total = price + CFG.serviceFee;
+    document.getElementById('extCost').textContent = '$' + price.toFixed(2);
+    document.getElementById('extTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('extConfirmAmt').textContent = '$' + total.toFixed(2);
+    if (session.endsAt) {
+      const newEnd = new Date(session.endsAt.getTime() + extSelectedMins*60000);
+      document.getElementById('extNewExpire').textContent = fmtTime(newEnd) + ' · ' + fmtDate(newEnd);
+    }
+  }
+
+  // Wire up extend option buttons
+  document.querySelectorAll('.ext-opt').forEach(o => {
+    o.addEventListener('click', () => {
+      extSelectedMins = parseInt(o.dataset.mins, 10);
+      document.querySelectorAll('.ext-opt').forEach(b => b.classList.toggle('on', b === o));
+      updateExtSummary();
+    });
+  });
+
+  // Pay buttons — make pay button always clickable for demo
+  document.getElementById('payBtn').addEventListener('click', () => {
+    if (document.getElementById('payBtn').disabled) {
+      // Auto-fill demo data and process anyway
+      document.getElementById('plateNum').value = 'ABC1234';
+      document.getElementById('phoneNum').value = '(555) 234-5678';
+      render();
+    }
+    processPay('card');
+  });
+  document.getElementById('applePayBtn').addEventListener('click', () => processPay('apple'));
+  document.getElementById('googlePayBtn').addEventListener('click', () => processPay('google'));
+
+  // Make wallet buttons demo-able (always enabled)
+  document.getElementById('applePayBtn').disabled = false;
+  document.getElementById('googlePayBtn').disabled = false;
+
+
+  // ═══════════════════════════════════════════════════════════════
+  // SESSION MENU
+  // ═══════════════════════════════════════════════════════════════
+  window.openSessMenu = function(){
+    document.getElementById('menuBackdrop').classList.add('show');
+    document.getElementById('menuPanel').classList.add('show');
+  };
+  window.closeSessMenu = function(){
+    document.querySelectorAll('.menu-section').forEach(s => s.classList.remove('show'));
+    document.getElementById('menuPanel').classList.remove('show');
+    document.getElementById('menuBackdrop').classList.remove('show');
+  };
+  window.openSecPage = function(id){
+    document.getElementById('menuPanel').classList.remove('show');
+    document.querySelectorAll('.menu-section').forEach(s => s.classList.remove('show'));
+    const page = document.getElementById('sec-' + id);
+    if (page){
+      page.classList.add('show');
+      // Sync the current "Beach Lot 1 North" activity amount to whatever the live session shows
+      if (id === 'activity' && session && session.transactions && session.transactions.length){
+        const last = session.transactions[session.transactions.length - 1];
+        const el = document.getElementById('actCurAmt');
+        if (el && last.amount != null) el.textContent = last.amount === 0 ? 'FREE' : '$' + last.amount.toFixed(2);
+      }
+    }
+  };
+  window.closeSecPage = function(){
+    document.querySelectorAll('.menu-section').forEach(s => s.classList.remove('show'));
+    document.getElementById('menuPanel').classList.add('show');
+  };
+
+  render();
+</script>
+</body>
+</html>
